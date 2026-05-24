@@ -921,17 +921,82 @@ body.porsche-theme {
     .porsche-navbar {
         padding: 15px 20px;
     }
+    .brand-porsche {
+        font-size: 15px;
+        letter-spacing: 2px;
+    }
+    .brand-divider, .brand-sub {
+        display: none !important;
+    }
+    .logo-porsche {
+        height: 28px;
+    }
+    .logo-tegeta {
+        height: 12px;
+    }
     .cockpit-container {
-        padding: 20px;
+        padding: 15px;
     }
     .hero-text h1 {
-        font-size: 30px;
+        font-size: 28px;
     }
     .drop-zone {
-        height: 250px;
+        height: 240px;
         padding: 20px;
     }
     .summary-cards {
+        grid-template-columns: 1fr;
+    }
+    .instruction-header-title {
+        padding: 15px 20px;
+    }
+    .title-ge {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .title-ge h2 {
+        font-size: 20px;
+    }
+    .title-en {
+        margin-left: 0;
+        margin-top: 5px;
+    }
+    .panel {
+        padding: 20px 15px;
+    }
+    .step-card {
+        padding: 15px;
+    }
+    .parts-table th, .parts-table td {
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+    .settings-content {
+        width: 90%;
+        padding: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .porsche-navbar {
+        padding: 12px 15px;
+    }
+    .brand-porsche {
+        display: none !important; /* Hide to prevent squishing */
+    }
+    .logo-tegeta {
+        margin-left: 0;
+    }
+    .step-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .step-header .btn-toggle-en {
+        align-self: flex-start;
+    }
+    .tools-grid {
         grid-template-columns: 1fr;
     }
 }
