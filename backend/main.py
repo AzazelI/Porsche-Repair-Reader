@@ -215,6 +215,7 @@ async def analyze_instruction(
             os.remove(temp_file_path)
 
 @app.get("/health")
+@app.head("/health")
 def health_check():
     """Health check endpoint."""
     return {"status": "ok", "api_key_configured": bool(os.getenv("GEMINI_API_KEY"))}
