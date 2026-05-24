@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ka">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Porsche Repair Instruction Reader</title>
+    <!-- Google Fonts: Outfit for premium modern feel -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="porsche-theme">
+    
+    <!-- Top Premium Navbar -->
+    <header class="porsche-navbar">
+        <div class="logo-area">
+            <img class="logo-porsche" src="https://pngimg.com/uploads/porsche_logo/porsche_logo_PNG1.png" alt="Porsche">
+            <span class="brand-porsche">PORSCHE</span>
+            <span class="brand-divider">|</span>
+            <img class="logo-tegeta" src="https://tegetamotors.ge/Content/img/tegeta-logo.png" alt="Tegeta Cars">
+            <span class="brand-sub">Aftersales Intelligence</span>
+        </div>
+        <div class="nav-actions">
+            <button id="settings-toggle" class="btn-icon" title="პარამეტრები (API Key)">
+                <i class="fa-solid fa-cog"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="cockpit-container">
+        
+        <!-- API KEY SETTINGS POPUP (Hidden by default) -->
+        <div id="settings-modal" class="settings-modal hidden">
+            <div class="settings-content glassmorphism">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-key"></i> Gemini API კონფიგურაცია</h3>
+                    <button id="settings-close" class="btn-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>ჩასვით თქვენი Gemini API Key აპლიკაციის სამუშაოდ. ის უსაფრთხოდ შეინახება ბრაუზერში (LocalStorage-ში).</p>
+                    <div class="input-group">
+                        <input type="password" id="api-key-input" placeholder="AIzaSy..." />
+                        <button id="api-key-save" class="btn-primary">შენახვა</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HERO UPLOAD SECTION -->
+        <section id="upload-section" class="upload-section">
+            <div class="hero-text">
+                <h1>Repair Instruction Reader</h1>
+                <p>ატვირთეთ პორშეს პორტალიდან ჩამოტვირთული სარემონტო ინსტრუქცია (PDF). სისტემა ავტომატურად ამოიღებს სათადარიგო ნაწილებს, ნორმა-საათებს და თარგმნის ნაბიჯებს ქართულად.</p>
+            </div>
+            
+            <!-- Drag and Drop Zone -->
+            <div id="drop-zone" class="drop-zone glassmorphism">
+                <div class="drop-content">
+                    <div class="icon-pulsate">
+                        <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <h2>გადმოათრიეთ PDF ფაილი აქ</h2>
+                    <p>ან დააჭირეთ ასატვირთად</p>
+                    <input type="file" id="file-input" accept=".pdf" class="hidden-file-input">
+                </div>
+            </div>
+        </section>
+
+        <!-- SPEEDOMETER LOADING SECTION (Hidden by default) -->
+        <section id="loading-section" class="loading-section hidden">
+            <div class="speedometer-container">
+                <svg class="speedometer" viewBox="0 0 200 200">
+                    <circle class="speedo-bg" cx="100" cy="100" r="80"></circle>
+                    <circle id="speedo-progress" class="speedo-progress" cx="100" cy="100" r="80"></circle>
+                </svg>
+                <div class="speedo-text">
+                    <span id="speedo-value" class="speedo-value">0</span>
+                    <span class="speedo-unit">KM/H</span>
+                </div>
+            </div>
+            <h2 id="loading-status-text">ინსტრუქციის ანალიზი მიმდინარეობს...</h2>
+            <p>ხდება PDF ტექსტის ამოღება და AI თარგმნა ქართულ ენაზე</p>
+        </section>
+
+        <!-- DASHBOARD CONTAINER (Hidden by default, shown after upload) -->
+        <section id="dashboard-section" class="dashboard-section hidden">
+            
+            <!-- Dashboard Summary Header Cards -->
+            <div class="summary-cards">
+                <div class="card summary-card glassmorphism">
+                    <div class="card-icon icon-time"><i class="fa-solid fa-clock"></i></div>
+                    <div class="card-info">
+                        <h3>სერვისის დრო (Labor Time)</h3>
+                        <span id="res-labor-time" class="highlight-val">--</span>
+                    </div>
+                </div>
+                
+                <div class="card summary-card glassmorphism">
+                    <div class="card-icon icon-parts"><i class="fa-solid fa-gears"></i></div>
+                    <div class="card-info">
+                        <h3>ნაწილები (Total Parts)</h3>
+                        <span id="res-total-parts" class="highlight-val">--</span>
+                    </div>
+                </div>
+                
+                <div class="card summary-card glassmorphism">
+                    <div class="card-icon icon-tools"><i class="fa-solid fa-wrench"></i></div>
+                    <div class="card-info">
+                        <h3>სპეციალური ხელსაწყოები</h3>
+                        <span id="res-total-tools" class="highlight-val">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Title Header -->
+            <div class="instruction-header-title glassmorphism">
+                <div class="title-ge">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                    <h2 id="res-title-ka">სარემონტო ინსტრუქცია</h2>
+                </div>
+                <span id="res-title-en" class="title-en">Original: --</span>
+            </div>
+
+            <!-- Main Work Split Grid -->
+            <div class="dashboard-grid">
+                
+                <!-- Left Pane: Interactive Timeline Steps -->
+                <div class="panel steps-panel glassmorphism">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-list-check"></i> ეტაპობრივი ინსტრუქცია (Timeline)</h2>
+                    </div>
+                    <div id="steps-container" class="steps-container">
+                        <!-- Steps will be dynamically injected here -->
+                    </div>
+                </div>
+
+                <!-- Right Pane: Parts and Specs -->
+                <div class="right-pane">
+                    
+                    <!-- Parts Table -->
+                    <div class="panel parts-panel glassmorphism">
+                        <div class="panel-header">
+                            <h2><i class="fa-solid fa-box-open"></i> სათადარიგო ნაწილები</h2>
+                        </div>
+                        <div class="table-container">
+                            <table class="parts-table">
+                                <thead>
+                                    <tr>
+                                        <th>კოდი (Part No.)</th>
+                                        <th>დასახელება</th>
+                                        <th>ტიპი (Status)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="parts-container">
+                                    <!-- Parts injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Key Details / Specs -->
+                    <div class="panel details-panel glassmorphism">
+                        <div class="panel-header">
+                            <h2><i class="fa-solid fa-circle-info"></i> ტექნიკური მახასიათებლები & ძალები</h2>
+                        </div>
+                        <ul id="details-container" class="details-list">
+                            <!-- Details injected dynamically -->
+                        </ul>
+                    </div>
+
+                    <!-- Special Tools -->
+                    <div class="panel tools-panel glassmorphism">
+                        <div class="panel-header">
+                            <h2><i class="fa-solid fa-toolbox"></i> საჭირო სპეციალური ხელსაწყოები</h2>
+                        </div>
+                        <div id="tools-container" class="tools-grid">
+                            <!-- Tools injected dynamically -->
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Reset Button to upload another -->
+            <div class="action-footer">
+                <button id="btn-reset" class="btn-secondary"><i class="fa-solid fa-arrow-left"></i> ახალი ფაილის ატვირთვა</button>
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="porsche-footer">
+        <p>&copy; 2026 Porsche Aftersales Intelligent Reader. All rights reserved.</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
