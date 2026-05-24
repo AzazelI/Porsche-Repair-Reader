@@ -19,7 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const settingsModal = document.getElementById("settings-modal");
     const settingsClose = document.getElementById("settings-close");
     const apiKeyInput = document.getElementById("api-key-input");
-    const apiKeySave = document.getElementById("api-key-save");
+    const apiUrlInput = document.getElementById("api-url-input");
+    const settingsSave = document.getElementById("settings-save");
     
     // Loading/Speedometer Elements
     const speedoProgress = document.getElementById("speedo-progress");
@@ -39,14 +40,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const toolsContainer = document.getElementById("tools-container");
 
     // ==========================================
-    // API KEY MANAGEMENT
+    // CONFIGURATION MANAGEMENT
     // ==========================================
     
-    // Load existing key from LocalStorage
+    // Load existing settings from LocalStorage
     let savedApiKey = localStorage.getItem("gemini_api_key") || "";
     if (savedApiKey) {
         apiKeyInput.value = savedApiKey;
     }
+    
+    let savedApiUrl = localStorage.getItem("backend_api_url") || DEFAULT_API_URL;
+    apiUrlInput.value = savedApiUrl;
 
     // Toggle Settings Modal
     settingsToggle.addEventListener("click", () => {
@@ -64,19 +68,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Save Key
-    apiKeySave.addEventListener("click", () => {
+    // Save Settings
+    settingsSave.addEventListener("click", () => {
         const key = apiKeyInput.value.trim();
+        const url = apiUrlInput.value.trim() || DEFAULT_API_URL;
+        
         if (key) {
             localStorage.setItem("gemini_api_key", key);
             savedApiKey = key;
-            alert("API Key წარმატებით შეინახა!");
-            settingsModal.classList.add("hidden");
         } else {
             localStorage.removeItem("gemini_api_key");
             savedApiKey = "";
-            alert("API Key წაიშალა.");
         }
+        
+        localStorage.setItem("backend_api_url", url);
+        savedApiUrl = url;
+        
+        alert("პარამეტრები წარმატებით შეინახა!");
+        settingsModal.classList.add("hidden");
     });
 
     // ==========================================
@@ -162,7 +171,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("file", file);
 
         // Call FastAPI Backend
-        fetch(`${DEFAULT_API_URL}/analyze-instruction`, {
+        fetch(`${savedApiUrl}/analyze-instruction`, {
             method: "POST",
             headers: {
                 "X-Gemini-API-Key": savedApiKey

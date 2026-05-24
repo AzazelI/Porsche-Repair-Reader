@@ -34,14 +34,24 @@
         <div id="settings-modal" class="settings-modal hidden">
             <div class="settings-content glassmorphism">
                 <div class="modal-header">
-                    <h3><i class="fa-solid fa-key"></i> Gemini API კონფიგურაცია</h3>
+                    <h3><i class="fa-solid fa-sliders"></i> პარამეტრები & კონფიგურაცია</h3>
                     <button id="settings-close" class="btn-close">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p>ჩასვით თქვენი Gemini API Key აპლიკაციის სამუშაოდ. ის უსაფრთხოდ შეინახება ბრაუზერში (LocalStorage-ში).</p>
-                    <div class="input-group">
-                        <input type="password" id="api-key-input" placeholder="AIzaSy..." />
-                        <button id="api-key-save" class="btn-primary">შენახვა</button>
+                    <div class="settings-field">
+                        <label for="api-key-input"><i class="fa-solid fa-key"></i> Gemini API Key:</label>
+                        <input type="password" id="api-key-input" placeholder="ჩაწერეთ თქვენი Gemini API Key..." />
+                        <span class="settings-help">მიიღება Google AI Studio-დან უფასოდ. ინახება თქვენს ბრაუზერში.</span>
+                    </div>
+                    
+                    <div class="settings-field" style="margin-top: 15px;">
+                        <label for="api-url-input"><i class="fa-solid fa-server"></i> Backend API URL:</label>
+                        <input type="text" id="api-url-input" placeholder="http://localhost:8000" />
+                        <span class="settings-help">ლოკალური სერვერისთვის: http://localhost:8000, ონლაინ ვერსიისთვის: Render-ის მისამართი.</span>
+                    </div>
+                    
+                    <div class="modal-actions" style="margin-top: 20px; text-align: right;">
+                        <button id="settings-save" class="btn-primary"><i class="fa-solid fa-save"></i> შენახვა</button>
                     </div>
                 </div>
             </div>
