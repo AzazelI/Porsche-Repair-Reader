@@ -143,7 +143,7 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
         "1. Identify the Title (EN and translation in Georgian).\n"
         "2. Extract the exact labor time or FRUs listed. Format strictly as 'X FRU' (e.g., '4 FRU').\n"
         "3. Extract required parts and consumables (with statuses set to 'renew'). For parts without part numbers, set part_number to 'N/A' or find it in the text (e.g., 18 21 9 062 599 for Optimoly TA).\n"
-        "4. Extract the step-by-step repair instruction sequence. Translate each step accurately to Georgian using the Automotive Glossary above. Do not combine, summarize, or omit steps.\n"
+        "4. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests, engine start suppression checks, or diagnostic checklists (such as extending side stands, testing automated shift assistants, or pulling clutch levers) to avoid cluttering the timeline with dozens of repetitive, non-mechanical testing bullet points. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). Translate each step accurately using the Automotive Glossary above.\n"
         "5. Extract safety warnings or torque specs associated with steps.\n"
         "6. Extract Special Tools required (e.g. rear-wheel stand, WE-1200).\n\n"
         f"Repair Instruction Text:\n{text}"
