@@ -120,6 +120,7 @@ def upload_to_supabase(file_path: str, filename: str) -> Optional[str]:
     
     headers = {
         "Authorization": f"Bearer {supabase_key}",
+        "apikey": supabase_key,
         "Content-Type": "application/pdf"
     }
     
@@ -306,6 +307,7 @@ def test_supabase():
     
     headers = {
         "Authorization": f"Bearer {supabase_key}",
+        "apikey": supabase_key,
         "Content-Type": "text/plain"
     }
     
