@@ -2,6 +2,8 @@ import os
 import json
 import logging
 import requests
+import hashlib
+import random
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -98,6 +100,42 @@ def extract_text_from_pdf(pdf_path: str) -> str:
     except Exception as e:
         logger.error(f"Error reading PDF: {e}")
         raise HTTPException(status_code=400, detail=f"Failed to read PDF file: {str(e)}")
+
+def compute_sha256(file_path: str) -> str:
+    """Computes the SHA-256 hash of a file."""
+    sha256_hash = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    return sha256_hash.hexdigest()
+
+def get_gemini_api_key(header_key: Optional[str]) -> str:
+    """
+    Determines which Gemini API key to use. 
+    If a header key is passed, we use it directly. 
+    Otherwise, we pull GEMINI_API_KEY from environment variables. 
+    If GEMINI_API_KEY contains multiple keys separated by commas, 
+    we choose one at random to distribute the load!
+    """
+    if header_key:
+        return header_key.strip()
+        
+    env_keys = os.getenv("GEMINI_API_KEY", "")
+    if not env_keys:
+        raise HTTPException(
+            status_code=400, 
+            detail="API Key missing. Please provide it in the X-Gemini-API-Key header or set GEMINI_API_KEY environment variable."
+        )
+        
+    # Split by comma to support multiple keys in the pool
+    keys = [k.strip() for k in env_keys.split(",") if k.strip()]
+    if not keys:
+        raise HTTPException(
+            status_code=400, 
+            detail="No valid API keys found in the GEMINI_API_KEY pool."
+        )
+        
+    return random.choice(keys)
 
 def upload_to_supabase(file_path: str, filename: str) -> Optional[str]:
     """Uploads the PDF manual to Supabase Storage bucket and returns the object path."""
@@ -243,18 +281,10 @@ async def analyze_instruction(
 ):
     """
     Uploads a Porsche Repair Instruction PDF, extracts the text, 
-    and returns a structured, translated JSON analysis.
+    and returns a structured, translated JSON analysis (utilizing SHA-256 caching and key rotation).
     """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
-
-    # Determine API key priority: Header first, then Environment Variable
-    api_key = x_gemini_api_key or os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise HTTPException(
-            status_code=400, 
-            detail="API Key missing. Please provide it in the X-Gemini-API-Key header or set GEMINI_API_KEY environment variable."
-        )
 
     # Save uploaded file temporarily
     temp_file_path = f"temp_{file.filename}"
@@ -262,22 +292,52 @@ async def analyze_instruction(
         with open(temp_file_path, "wb") as f:
             f.write(await file.read())
 
-        # Extract text from the PDF
+        # 1. Compute SHA-256 of the PDF file
+        file_hash = compute_sha256(temp_file_path)
+        logger.info(f"Computing SHA-256 for file: {file.filename} -> {file_hash}")
+        
+        # 2. Check local response cache
+        cache_dir = "cache"
+        os.makedirs(cache_dir, exist_ok=True)
+        cache_file = os.path.join(cache_dir, f"{file_hash}.json")
+        
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    cached_data = json.load(f)
+                logger.info(f"Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
+                return cached_data
+            except Exception as ce:
+                logger.error(f"Error reading cached file: {ce}. Falling back to fresh analysis.")
+
+        # 3. Extract text from the PDF
         logger.info(f"Extracting text from PDF: {file.filename}")
         extracted_text = extract_text_from_pdf(temp_file_path)
         
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="No readable text found in the uploaded PDF.")
 
-        # Upload to Supabase Storage (safely without breaking the main flow)
+        # 4. Upload to Supabase Storage (safely without breaking the main flow)
         try:
             upload_to_supabase(temp_file_path, file.filename)
         except Exception as se:
             logger.error(f"Failed to upload to Supabase: {se}")
 
-        # Analyze and translate with Gemini Structured Output
-        logger.info("Analyzing text with Gemini Structured Output API")
+        # 5. Determine Gemini API Key via Rotator
+        api_key = get_gemini_api_key(x_gemini_api_key)
+
+        # 6. Analyze and translate with Gemini Structured Output
+        logger.info("Analyzing text with Gemini Structured Output API (Rate-Limit Safe)")
         structured_data = analyze_with_gemini(extracted_text, api_key)
+        
+        # 7. Save successful response to local cache
+        try:
+            with open(cache_file, "w", encoding="utf-8") as f:
+                json.dump(structured_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"Saved new analysis to cache: {cache_file}")
+        except Exception as cse:
+            logger.error(f"Failed to write response to cache: {cse}")
+            
         return structured_data
 
     finally:

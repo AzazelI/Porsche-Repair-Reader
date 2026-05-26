@@ -297,7 +297,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function loggerError(msg) {
-        alert(`შეცდომა დამუშავებისას: ${msg}`);
+        // Reset fileInput value so they can upload the exact same file again immediately
+        if (fileInput) {
+            fileInput.value = "";
+        }
+        
+        let displayMsg = msg;
+        if (msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("limit")) {
+            displayMsg = "Gemini სერვერი დროებით გადატვირთულია (კვოტა ამოიწურა).\n\n" +
+                         "გთხოვთ, სცადოთ 60 წამში ხელახლა, ან საიდუმლო საინჟინრო მენიუდან (⚙️) " +
+                         "შეიყვანოთ თქვენი პირადი Gemini API გასაღები, რათა გვერდი აუაროთ ამ შეზღუდვას.";
+        }
+        
+        alert(`შეცდომა დამუშავებისას: ${displayMsg}`);
         uploadSection.classList.remove("hidden");
         loadingSection.classList.add("hidden");
     }
