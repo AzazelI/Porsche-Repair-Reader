@@ -144,12 +144,6 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (!savedApiKey) {
-            alert("გთხოვთ, ჯერ შეიყვანოთ Gemini API Key პარამეტრების მენიუდან (Gear Icon ზედა მარჯვენა კუთხეში).");
-            settingsModal.classList.remove("hidden");
-            return;
-        }
-
         // Show loading screen, hide upload
         uploadSection.classList.add("hidden");
         loadingSection.classList.remove("hidden");
@@ -170,12 +164,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const formData = new FormData();
         formData.append("file", file);
 
+        // Construct headers conditionally: send key if overridden locally, otherwise let server use env var
+        const headers = {};
+        if (savedApiKey) {
+            headers["X-Gemini-API-Key"] = savedApiKey;
+        }
+
         // Call FastAPI Backend
         fetch(`${savedApiUrl}/analyze-instruction`, {
             method: "POST",
-            headers: {
-                "X-Gemini-API-Key": savedApiKey
-            },
+            headers: headers,
             body: formData
         })
         .then(response => {
