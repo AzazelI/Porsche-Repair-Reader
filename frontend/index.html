@@ -21,7 +21,16 @@
             <img class="logo-tegeta" src="https://tegetamotors.ge/Content/img/tegeta-logo.png" alt="Tegeta Cars">
             <span class="brand-sub">Aftersales Intelligence</span>
         </div>
-        <div class="nav-actions">
+        <div class="nav-actions" style="display: flex; gap: 15px; align-items: center;">
+            <!-- Porsche Driving Mode Dial -->
+            <div class="porsche-mode-selector" title="მართვის რეჟიმი (თემა)">
+                <span class="mode-label">MODE</span>
+                <div class="mode-dial-wrapper">
+                    <button class="btn-mode active" data-mode="normal" title="Normal - Carbon Dark">N</button>
+                    <button class="btn-mode" data-mode="sport" title="Sport - Guards Red">S</button>
+                    <button class="btn-mode" data-mode="track" title="Track / GT - Chrono Gold">GT</button>
+                </div>
+            </div>
             <button id="settings-toggle" class="btn-icon hidden" title="პარამეტრები (API Key)">
                 <i class="fa-solid fa-cog"></i>
             </button>
@@ -89,6 +98,14 @@
                     <span class="speedo-unit">KM/H</span>
                 </div>
             </div>
+            
+            <!-- Porsche Sport Chrono Timer -->
+            <div class="chrono-timer glassmorphism">
+                <span class="pulsating-red"></span>
+                <span style="font-size: 11px; letter-spacing: 1.5px; color: var(--color-text-grey); font-weight: 600;">SPORT CHRONO</span>
+                <span id="chrono-time" style="font-size: 16px; font-weight: 700; color: var(--color-text-white); font-family: monospace;">00:00.00</span>
+            </div>
+            
             <h2 id="loading-status-text">ინსტრუქციის ანალიზი მიმდინარეობს...</h2>
             <p>ხდება PDF ტექსტის ამოღება და AI თარგმნა ქართულ ენაზე</p>
         </section>

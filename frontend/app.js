@@ -53,6 +53,24 @@ document.addEventListener("DOMContentLoaded", () => {
     let savedApiUrl = localStorage.getItem("backend_api_url") || DEFAULT_API_URL;
     apiUrlInput.value = savedApiUrl;
 
+    // Driving Mode Selector (Normal / Sport / Track Themes)
+    const modeButtons = document.querySelectorAll(".btn-mode");
+    modeButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            modeButtons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            
+            const mode = btn.getAttribute("data-mode");
+            document.body.classList.remove("theme-sport", "theme-track");
+            
+            if (mode === "sport") {
+                document.body.classList.add("theme-sport");
+            } else if (mode === "track") {
+                document.body.classList.add("theme-track");
+            }
+        });
+    });
+
     // Secret Admin Mode Handler (Triple Click on Porsche crest with Password protection)
     let clickCount = 0;
     let clickTimer = null;
@@ -212,6 +230,27 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }, 300);
 
+        // Start Sport Chrono Millisecond Timer
+        const chronoTimeElement = document.getElementById("chrono-time");
+        if (chronoTimeElement) {
+            chronoTimeElement.textContent = "00:00.00";
+        }
+        let startTime = Date.now();
+        const chronoInterval = setInterval(() => {
+            const elapsedTime = Date.now() - startTime;
+            const minutes = Math.floor(elapsedTime / 60000);
+            const seconds = Math.floor((elapsedTime % 60000) / 1000);
+            const ms = Math.floor((elapsedTime % 1000) / 10);
+            
+            const minutesStr = String(minutes).padStart(2, "0");
+            const secondsStr = String(seconds).padStart(2, "0");
+            const msStr = String(ms).padStart(2, "0");
+            
+            if (chronoTimeElement) {
+                chronoTimeElement.textContent = `${minutesStr}:${secondsStr}.${msStr}`;
+            }
+        }, 33); // 30 fps refresh rate
+
         // Prepare multipart form data
         const formData = new FormData();
         formData.append("file", file);
@@ -246,11 +285,13 @@ document.addEventListener("DOMContentLoaded", () => {
             
             setTimeout(() => {
                 clearInterval(progressInterval);
+                clearInterval(chronoInterval);
                 renderDashboard(data);
             }, 800);
         })
         .catch(error => {
             clearInterval(progressInterval);
+            clearInterval(chronoInterval);
             loggerError(error.message);
         });
     }

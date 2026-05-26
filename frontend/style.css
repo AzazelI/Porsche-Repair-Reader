@@ -1000,3 +1000,183 @@ body.porsche-theme {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================
+   PORSCHE PREMIUM DRIVING MODE WIDGET
+   ========================================== */
+.porsche-mode-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(20, 20, 23, 0.6);
+    border: 1px solid var(--color-border);
+    padding: 4px 10px;
+    border-radius: 30px;
+    font-family: var(--font-porsche);
+}
+
+.mode-label {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--color-text-grey);
+    text-transform: uppercase;
+}
+
+.mode-dial-wrapper {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-mode {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--color-text-grey);
+    font-size: 11px;
+    font-weight: 700;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* NORMAL MODE ACTIVE */
+.btn-mode[data-mode="normal"].active {
+    background-color: #28282e;
+    color: var(--color-text-white);
+    border-color: var(--color-border-glow);
+}
+
+/* SPORT MODE ACTIVE */
+.btn-mode[data-mode="sport"].active {
+    background-color: var(--color-guards-red);
+    color: var(--color-text-white);
+    box-shadow: 0 0 10px rgba(213, 0, 28, 0.4);
+}
+
+/* TRACK MODE ACTIVE */
+.btn-mode[data-mode="track"].active {
+    background-color: var(--color-amber-gold);
+    color: var(--color-text-dark);
+    box-shadow: 0 0 10px rgba(208, 158, 58, 0.4);
+}
+
+/* ==========================================
+   THEME STYLES (SPORT & TRACK OVERRIDES)
+   ========================================== */
+
+/* SPORT THEME */
+body.porsche-theme.theme-sport {
+    background-image: radial-gradient(circle at top right, rgba(213, 0, 28, 0.08), transparent 50%),
+                      radial-gradient(circle at bottom left, rgba(213, 0, 28, 0.04), transparent 40%);
+}
+body.porsche-theme.theme-sport .glassmorphism {
+    border-color: rgba(213, 0, 28, 0.15);
+}
+body.porsche-theme.theme-sport .glassmorphism:hover {
+    border-color: rgba(213, 0, 28, 0.3);
+    box-shadow: 0 0 20px rgba(213, 0, 28, 0.05), var(--box-shadow-premium);
+}
+body.porsche-theme.theme-sport .title-ge i,
+body.porsche-theme.theme-sport .panel-header h2 i {
+    color: var(--color-guards-red);
+}
+body.porsche-theme.theme-sport .step-node {
+    border-color: var(--color-guards-red);
+}
+body.porsche-theme.theme-sport .step-card:hover .step-node {
+    background-color: var(--color-guards-red);
+    box-shadow: 0 0 10px var(--color-guards-red);
+}
+body.porsche-theme.theme-sport .step-number {
+    background-color: rgba(213, 0, 28, 0.1);
+    color: var(--color-guards-red);
+}
+
+/* TRACK THEME (GT GOLD) */
+body.porsche-theme.theme-track {
+    background-image: radial-gradient(circle at top right, rgba(208, 158, 58, 0.08), transparent 50%),
+                      radial-gradient(circle at bottom left, rgba(208, 158, 58, 0.04), transparent 40%);
+    background-color: #08080a;
+}
+body.porsche-theme.theme-track .glassmorphism {
+    border-color: rgba(208, 158, 58, 0.15);
+    background: rgba(12, 12, 14, 0.8);
+}
+body.porsche-theme.theme-track .glassmorphism:hover {
+    border-color: rgba(208, 158, 58, 0.35);
+    box-shadow: 0 0 25px rgba(208, 158, 58, 0.08), var(--box-shadow-premium);
+}
+body.porsche-theme.theme-track .title-ge i,
+body.porsche-theme.theme-track .panel-header h2 i {
+    color: var(--color-amber-gold);
+}
+body.porsche-theme.theme-track .step-node {
+    border-color: var(--color-amber-gold);
+}
+body.porsche-theme.theme-track .step-card:hover .step-node {
+    background-color: var(--color-amber-gold);
+    box-shadow: 0 0 10px var(--color-amber-gold);
+}
+body.porsche-theme.theme-track .step-number {
+    background-color: rgba(208, 158, 58, 0.15);
+    color: var(--color-amber-gold);
+}
+body.porsche-theme.theme-track .part-no {
+    color: var(--color-amber-gold);
+    background-color: rgba(208, 158, 58, 0.08);
+}
+
+/* ==========================================
+   SPORT CHRONO WIDGET
+   ========================================== */
+.chrono-timer {
+    margin-top: 15px;
+    padding: 10px 20px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: monospace;
+    font-size: 14px;
+    border: 1px solid var(--color-border);
+    transition: all 0.3s ease;
+}
+
+.pulsating-red {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--color-guards-red);
+    box-shadow: 0 0 8px var(--color-guards-red);
+    animation: pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    50% { transform: scale(1.15); opacity: 1; box-shadow: 0 0 12px var(--color-guards-red); }
+    100% { transform: scale(0.9); opacity: 0.6; }
+}
+
+/* Carbon weave micro-texture for Track mode */
+body.porsche-theme.theme-track::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.015;
+    background-image: linear-gradient(45deg, #ccc 25%, transparent 25%), 
+                      linear-gradient(-45deg, #ccc 25%, transparent 25%), 
+                      linear-gradient(45deg, transparent 75%, #ccc 75%), 
+                      linear-gradient(-45deg, transparent 75%, #ccc 75%);
+    background-size: 4px 4px;
+    background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
+}
