@@ -99,6 +99,47 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         logger.error(f"Error reading PDF: {e}")
         raise HTTPException(status_code=400, detail=f"Failed to read PDF file: {str(e)}")
 
+def upload_to_supabase(file_path: str, filename: str) -> Optional[str]:
+    """Uploads the PDF manual to Supabase Storage bucket and returns the object path."""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
+    
+    if not supabase_url or not supabase_key:
+        logger.info("Supabase credentials not configured. Skipping cloud storage upload.")
+        return None
+        
+    bucket_name = "repair-manuals"
+    
+    # Construct unique filename (YYYYMMDD_HHMMSS_filename.pdf)
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    unique_filename = f"{timestamp}_{filename}"
+    
+    # Supabase Storage REST API Upload URL
+    url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{unique_filename}"
+    
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "Content-Type": "application/pdf"
+    }
+    
+    try:
+        with open(file_path, "rb") as f:
+            file_data = f.read()
+            
+        logger.info(f"Uploading {filename} to Supabase Storage bucket '{bucket_name}'...")
+        response = requests.post(url, data=file_data, headers=headers)
+        
+        if response.status_code == 200:
+            logger.info("Supabase upload successful!")
+            return unique_filename
+        else:
+            logger.error(f"Supabase upload failed: {response.status_code} - {response.text}")
+            return None
+    except Exception as e:
+        logger.error(f"Error during Supabase upload: {e}")
+        return None
+
 def analyze_with_gemini(text: str, api_key: str) -> dict:
     """Sends extracted PDF text to Gemini API and requests structured JSON output."""
     if not api_key:
@@ -226,6 +267,12 @@ async def analyze_instruction(
         
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="No readable text found in the uploaded PDF.")
+
+        # Upload to Supabase Storage (safely without breaking the main flow)
+        try:
+            upload_to_supabase(temp_file_path, file.filename)
+        except Exception as se:
+            logger.error(f"Failed to upload to Supabase: {se}")
 
         # Analyze and translate with Gemini Structured Output
         logger.info("Analyzing text with Gemini Structured Output API")
