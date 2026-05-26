@@ -387,6 +387,46 @@ def test_supabase():
         logger.error(f"Error during Supabase test: {e}")
         return {"status": "error", "message": str(e), "details": details}
 
+@app.get("/test-gemini")
+def test_gemini():
+    """Diagnostic endpoint to test all Gemini API keys in the pool and return exact responses."""
+    env_keys = os.getenv("GEMINI_API_KEY", "")
+    if not env_keys:
+        return {"status": "error", "message": "GEMINI_API_KEY not set in environment variables."}
+        
+    keys = [k.strip() for k in env_keys.split(",") if k.strip()]
+    results = []
+    
+    for i, key in enumerate(keys):
+        # Mask the key for security
+        masked_key = key[:10] + "..." if len(key) > 10 else key
+        
+        # Test Gemini API call with a simple prompt
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}"
+        payload = {
+            "contents": [{
+                "parts": [{"text": "Hello, respond with exactly 'OK'"}]
+            }]
+        }
+        
+        try:
+            response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+            results.append({
+                "key_index": i,
+                "key_preview": masked_key,
+                "status_code": response.status_code,
+                "response_text": response.text[:200]
+            })
+        except Exception as e:
+            results.append({
+                "key_index": i,
+                "key_preview": masked_key,
+                "status_code": "error",
+                "error": str(e)
+            })
+            
+    return {"status": "diagnostics_complete", "results": results}
+
 @app.get("/health")
 @app.head("/health")
 def health_check():
