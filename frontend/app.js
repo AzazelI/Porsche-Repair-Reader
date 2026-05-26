@@ -53,7 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let savedApiUrl = localStorage.getItem("backend_api_url") || DEFAULT_API_URL;
     apiUrlInput.value = savedApiUrl;
 
-    // Secret Admin Mode Handler (Triple Click on Porsche crest)
+    // Secret Admin Mode Handler (Triple Click on Porsche crest with Password protection)
     let clickCount = 0;
     let clickTimer = null;
     
@@ -67,22 +67,41 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (clickCount === 3) {
                 clearTimeout(clickTimer);
                 clickCount = 0;
-                settingsToggle.classList.toggle("hidden");
-                // Subtle visual feedback on logo click
-                logoPorsche.style.transform = "scale(1.2)";
-                logoPorsche.style.transition = "transform 0.2s ease";
-                setTimeout(() => {
-                    logoPorsche.style.transform = "scale(1)";
-                }, 200);
-                alert("საინჟინრო რეჟიმი გააქტიურებულია! ⚙️ ხატულა გამოჩნდა ნავიგაციის პანელში.");
+                
+                // Prompt for admin password
+                const passwordInput = prompt("გთხოვთ შეიყვანოთ საინჟინრო რეჟიმის პაროლი:");
+                
+                if (passwordInput === "Suffering1@") {
+                    settingsToggle.classList.toggle("hidden");
+                    
+                    // Subtle visual feedback on logo click
+                    logoPorsche.style.transform = "scale(1.2)";
+                    logoPorsche.style.transition = "transform 0.2s ease";
+                    setTimeout(() => {
+                        logoPorsche.style.transform = "scale(1)";
+                    }, 200);
+                    
+                    if (!settingsToggle.classList.contains("hidden")) {
+                        alert("საინჟინრო რეჟიმი წარმატებით გააქტიურდა! ⚙️ ხატულა გამოჩნდა ნავიგაციის პანელში.");
+                    } else {
+                        alert("საინჟინრო რეჟიმი დეაქტივირებულია და ხატულა დაიმალა.");
+                    }
+                } else if (passwordInput !== null) {
+                    alert("წვდომა უარყოფილია: არასწორი პაროლი!");
+                }
             }
         });
     }
 
-    // Also support ?admin=true URL parameter to show it automatically
+    // Also support ?admin=true URL parameter to show it automatically with password check
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("admin") === "true") {
-        settingsToggle.classList.remove("hidden");
+        const passwordInput = prompt("საინჟინრო რეჟიმის გასააქტიურებლად შეიყვანეთ პაროლი:");
+        if (passwordInput === "Suffering1@") {
+            settingsToggle.classList.remove("hidden");
+        } else if (passwordInput !== null) {
+            alert("წვდომა უარყოფილია: არასწორი პაროლი!");
+        }
     }
 
     // Toggle Settings Modal
