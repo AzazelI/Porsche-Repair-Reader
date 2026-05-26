@@ -284,6 +284,47 @@ async def analyze_instruction(
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
+@app.get("/test-supabase")
+def test_supabase():
+    """Diagnostic endpoint to test Supabase Storage upload and return exact errors."""
+    supabase_url = os.getenv("SUPABASE_URL")
+    supabase_key = os.getenv("SUPABASE_KEY")
+    
+    details = {
+        "supabase_url_configured": bool(supabase_url),
+        "supabase_key_configured": bool(supabase_key),
+        "supabase_url_value": supabase_url[:25] + "..." if supabase_url else None,
+        "supabase_key_preview": supabase_key[:15] + "..." if supabase_key else None
+    }
+    
+    if not supabase_url or not supabase_key:
+        return {"status": "error", "message": "Supabase URL or Key not set in environment variables.", "details": details}
+        
+    bucket_name = "repair-manuals"
+    unique_filename = "test_connection.txt"
+    url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{unique_filename}"
+    
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "Content-Type": "text/plain"
+    }
+    
+    try:
+        logger.info("Testing Supabase Storage upload...")
+        response = requests.post(url, data=b"Connection Test Successful", headers=headers)
+        
+        details["response_status_code"] = response.status_code
+        details["response_text"] = response.text
+        
+        if response.status_code == 200:
+            return {"status": "success", "message": "Successfully uploaded test file to Supabase Storage!", "details": details}
+            
+        return {"status": "failed", "message": f"Upload failed with status code {response.status_code}", "details": details}
+        
+    except Exception as e:
+        logger.error(f"Error during Supabase test: {e}")
+        return {"status": "error", "message": str(e), "details": details}
+
 @app.get("/health")
 @app.head("/health")
 def health_check():
