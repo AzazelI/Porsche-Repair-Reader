@@ -3,8 +3,8 @@
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
-    // API Configuration
-    const DEFAULT_API_URL = "http://localhost:8000";
+    // API Configuration - Set fallback directly to production so it works out-of-the-box for everyone
+    const DEFAULT_API_URL = "https://porsche-repair-reader.onrender.com";
     
     // Core UI Nodes
     const uploadSection = document.getElementById("upload-section");
@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const apiKeyInput = document.getElementById("api-key-input");
     const apiUrlInput = document.getElementById("api-url-input");
     const settingsSave = document.getElementById("settings-save");
+    const logoPorsche = document.getElementById("logo-porsche");
     
     // Loading/Speedometer Elements
     const speedoProgress = document.getElementById("speedo-progress");
@@ -51,6 +52,38 @@ document.addEventListener("DOMContentLoaded", () => {
     
     let savedApiUrl = localStorage.getItem("backend_api_url") || DEFAULT_API_URL;
     apiUrlInput.value = savedApiUrl;
+
+    // Secret Admin Mode Handler (Triple Click on Porsche crest)
+    let clickCount = 0;
+    let clickTimer = null;
+    
+    if (logoPorsche) {
+        logoPorsche.addEventListener("click", () => {
+            clickCount++;
+            if (clickCount === 1) {
+                clickTimer = setTimeout(() => {
+                    clickCount = 0;
+                }, 1500);
+            } else if (clickCount === 3) {
+                clearTimeout(clickTimer);
+                clickCount = 0;
+                settingsToggle.classList.toggle("hidden");
+                // Subtle visual feedback on logo click
+                logoPorsche.style.transform = "scale(1.2)";
+                logoPorsche.style.transition = "transform 0.2s ease";
+                setTimeout(() => {
+                    logoPorsche.style.transform = "scale(1)";
+                }, 200);
+                alert("საინჟინრო რეჟიმი გააქტიურებულია! ⚙️ ხატულა გამოჩნდა ნავიგაციის პანელში.");
+            }
+        });
+    }
+
+    // Also support ?admin=true URL parameter to show it automatically
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("admin") === "true") {
+        settingsToggle.classList.remove("hidden");
+    }
 
     // Toggle Settings Modal
     settingsToggle.addEventListener("click", () => {
