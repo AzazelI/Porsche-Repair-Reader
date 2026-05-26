@@ -30,6 +30,7 @@ GEMINI_SCHEMA = {
     "properties": {
         "title_en": {"type": "string", "description": "Title of the repair instruction in English."},
         "title_ka": {"type": "string", "description": "Title of the repair instruction translated in Georgian."},
+        "model_name": {"type": "string", "description": "The specific vehicle/motorcycle model name, e.g., 'R 1300 GS', 'Panamera 4S', '911 GT3 (992)'. If not found, use 'Unknown Model'."},
         "labor_time": {"type": "string", "description": "The estimated labor time or FRUs (Flat Rate Units), e.g., '1.8 hours' or '18 TU'. If not specified, estimate based on complexity."},
         "key_details_en": {
             "type": "array",
@@ -84,7 +85,7 @@ GEMINI_SCHEMA = {
             "description": "List of special tools required for this repair."
         }
     },
-    "required": ["title_en", "title_ka", "labor_time", "key_details_en", "key_details_ka", "parts", "steps", "special_tools"]
+    "required": ["title_en", "title_ka", "model_name", "labor_time", "key_details_en", "key_details_ka", "parts", "steps", "special_tools"]
 }
 
 def extract_text_from_pdf(pdf_path: str) -> str:
@@ -137,8 +138,8 @@ def get_gemini_api_key(header_key: Optional[str]) -> str:
         
     return random.choice(keys)
 
-def upload_to_supabase(file_path: str, filename: str) -> Optional[str]:
-    """Uploads the PDF manual to Supabase Storage bucket and returns the object path."""
+def upload_to_supabase(file_path: str, model_name: str, repair_title: str) -> Optional[str]:
+    """Uploads the PDF manual to Supabase Storage bucket using custom named path and prevents duplication."""
     supabase_url = os.getenv("SUPABASE_URL", "").strip()
     supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
     
@@ -148,13 +149,28 @@ def upload_to_supabase(file_path: str, filename: str) -> Optional[str]:
         
     bucket_name = "repair-manuals"
     
-    # Construct unique filename (YYYYMMDD_HHMMSS_filename.pdf)
-    import datetime
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    unique_filename = f"{timestamp}_{filename}"
+    # 1. Sanitize model name and repair title for URL/filename safety
+    import re
+    def sanitize(text: str) -> str:
+        # Replace spaces, slashes and special characters with underscores
+        cleaned = re.sub(r'[\s/\\?%*:|"<>\.\-\(\)]+', '_', text)
+        # Strip multiple consecutive underscores
+        cleaned = re.sub(r'_+', '_', cleaned)
+        return cleaned.strip('_')
+        
+    sanitized_model = sanitize(model_name)
+    sanitized_repair = sanitize(repair_title)
     
-    # Supabase Storage REST API Upload URL
-    url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{unique_filename}"
+    # Fallback if sanitization results in empty values
+    if not sanitized_model:
+        sanitized_model = "Unknown_Model"
+    if not sanitized_repair:
+        sanitized_repair = "Repair_Instruction"
+        
+    custom_filename = f"{sanitized_model}_{sanitized_repair}.pdf"
+    
+    # Supabase Storage REST API object URL
+    url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{custom_filename}"
     
     headers = {
         "Authorization": f"Bearer {supabase_key}",
@@ -163,15 +179,24 @@ def upload_to_supabase(file_path: str, filename: str) -> Optional[str]:
     }
     
     try:
+        # 2. Check if the file already exists using a HEAD request
+        logger.info(f"Checking if {custom_filename} already exists in Supabase Storage...")
+        check_response = requests.head(url, headers=headers)
+        
+        if check_response.status_code == 200:
+            logger.info(f"File {custom_filename} already exists in Supabase. Skipping upload to avoid duplication.")
+            return custom_filename
+            
+        # 3. File does not exist, upload it!
         with open(file_path, "rb") as f:
             file_data = f.read()
             
-        logger.info(f"Uploading {filename} to Supabase Storage bucket '{bucket_name}'...")
+        logger.info(f"Uploading {custom_filename} to Supabase Storage bucket '{bucket_name}'...")
         response = requests.post(url, data=file_data, headers=headers)
         
         if response.status_code == 200:
             logger.info("Supabase upload successful!")
-            return unique_filename
+            return custom_filename
         else:
             logger.error(f"Supabase upload failed: {response.status_code} - {response.text}")
             return None
@@ -221,11 +246,12 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
         
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
-        "2. Extract the exact labor time or FRUs listed. Format strictly as 'X FRU' (e.g., '4 FRU').\n"
-        "3. Extract required parts and consumables (with statuses set to 'renew'). For parts without part numbers, set part_number to 'N/A' or find it in the text (e.g., 18 21 9 062 599 for Optimoly TA).\n"
-        "4. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests, engine start suppression checks, or diagnostic checklists (such as extending side stands, testing automated shift assistants, or pulling clutch levers) to avoid cluttering the timeline with dozens of repetitive, non-mechanical testing bullet points. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). Translate each step accurately using the Automotive Glossary above.\n"
-        "5. Extract safety warnings or torque specs associated with steps.\n"
-        "6. Extract Special Tools required (e.g. rear-wheel stand, WE-1200).\n\n"
+        "2. Identify the specific vehicle or motorcycle model name (e.g., 'R 1300 GS', '911 Carrera S', 'Panamera'). Search the text carefully for the model designation. If not specified, look for context clues or model codes, otherwise use 'Unknown Model'.\n"
+        "3. Extract the exact labor time or FRUs listed. Format strictly as 'X FRU' (e.g., '4 FRU').\n"
+        "4. Extract required parts and consumables (with statuses set to 'renew'). For parts without part numbers, set part_number to 'N/A' or find it in the text (e.g., 18 21 9 062 599 for Optimoly TA).\n"
+        "5. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests, engine start suppression checks, or diagnostic checklists (such as extending side stands, testing automated shift assistants, or pulling clutch levers) to avoid cluttering the timeline with dozens of repetitive, non-mechanical testing bullet points. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). Translate each step accurately using the Automotive Glossary above.\n"
+        "6. Extract safety warnings or torque specs associated with steps.\n"
+        "7. Extract Special Tools required (e.g. rear-wheel stand, WE-1200).\n\n"
         f"Repair Instruction Text:\n{text}"
     )
 
@@ -282,6 +308,7 @@ async def analyze_instruction(
     """
     Uploads a Porsche Repair Instruction PDF, extracts the text, 
     and returns a structured, translated JSON analysis (utilizing SHA-256 caching and key rotation).
+    Saves PDF to Supabase Storage with dynamic naming ([Model]_[RepairTitle].pdf) and duplicate prevention.
     """
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
@@ -306,6 +333,15 @@ async def analyze_instruction(
                 with open(cache_file, "r", encoding="utf-8") as f:
                     cached_data = json.load(f)
                 logger.info(f"Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
+                
+                # In the background/safely, ensure it's archived in Supabase under proper name
+                try:
+                    model_name = cached_data.get("model_name", "Unknown_Model")
+                    repair_title = cached_data.get("title_en", "Repair_Instruction")
+                    upload_to_supabase(temp_file_path, model_name, repair_title)
+                except Exception as se:
+                    logger.error(f"Failed to ensure Supabase upload on cache hit: {se}")
+                    
                 return cached_data
             except Exception as ce:
                 logger.error(f"Error reading cached file: {ce}. Falling back to fresh analysis.")
@@ -317,26 +353,28 @@ async def analyze_instruction(
         if not extracted_text.strip():
             raise HTTPException(status_code=400, detail="No readable text found in the uploaded PDF.")
 
-        # 4. Upload to Supabase Storage (safely without breaking the main flow)
-        try:
-            upload_to_supabase(temp_file_path, file.filename)
-        except Exception as se:
-            logger.error(f"Failed to upload to Supabase: {se}")
-
-        # 5. Determine Gemini API Key via Rotator
+        # 4. Determine Gemini API Key via Rotator
         api_key = get_gemini_api_key(x_gemini_api_key)
 
-        # 6. Analyze and translate with Gemini Structured Output
+        # 5. Analyze and translate with Gemini Structured Output
         logger.info("Analyzing text with Gemini Structured Output API (Rate-Limit Safe)")
         structured_data = analyze_with_gemini(extracted_text, api_key)
         
-        # 7. Save successful response to local cache
+        # 6. Save successful response to local cache
         try:
             with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(structured_data, f, ensure_ascii=False, indent=2)
             logger.info(f"Saved new analysis to cache: {cache_file}")
         except Exception as cse:
             logger.error(f"Failed to write response to cache: {cse}")
+            
+        # 7. Upload to Supabase Storage with custom formatted name (safely without breaking main flow)
+        try:
+            model_name = structured_data.get("model_name", "Unknown_Model")
+            repair_title = structured_data.get("title_en", "Repair_Instruction")
+            upload_to_supabase(temp_file_path, model_name, repair_title)
+        except Exception as se:
+            logger.error(f"Failed to upload to Supabase: {se}")
             
         return structured_data
 
