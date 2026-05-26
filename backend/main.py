@@ -101,8 +101,8 @@ def extract_text_from_pdf(pdf_path: str) -> str:
 
 def upload_to_supabase(file_path: str, filename: str) -> Optional[str]:
     """Uploads the PDF manual to Supabase Storage bucket and returns the object path."""
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
     
     if not supabase_url or not supabase_key:
         logger.info("Supabase credentials not configured. Skipping cloud storage upload.")
@@ -288,8 +288,8 @@ async def analyze_instruction(
 @app.get("/test-supabase")
 def test_supabase():
     """Diagnostic endpoint to test Supabase Storage upload and return exact errors."""
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY")
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
     
     details = {
         "supabase_url_configured": bool(supabase_url),
