@@ -1180,3 +1180,122 @@ body.porsche-theme.theme-track::before {
     background-size: 4px 4px;
     background-position: 0 0, 0 2px, 2px -2px, -2px 0px;
 }
+
+/* ==========================================
+   COCKPIT UI/UX STUDIO ENHANCEMENTS
+   ========================================== */
+
+/* Speedometer Glowing Needle */
+.speedo-needle {
+    stroke: var(--color-guards-red);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transform-origin: 100px 100px;
+    transform: rotate(0deg);
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    filter: drop-shadow(0 0 5px var(--color-guards-red));
+}
+
+body.porsche-theme.theme-track .speedo-needle {
+    stroke: var(--color-amber-gold);
+    filter: drop-shadow(0 0 5px var(--color-amber-gold));
+}
+
+/* Glove-Friendly Interactive Checklist */
+.step-card-content-wrapper {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.step-card-body {
+    flex: 1;
+}
+
+.step-check-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+    background: rgba(20, 20, 23, 0.8);
+    color: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.step-check-btn:hover {
+    border-color: var(--color-amber-gold);
+    background-color: rgba(208, 158, 58, 0.05);
+    color: rgba(208, 158, 58, 0.4);
+}
+
+body.porsche-theme.theme-sport .step-check-btn:hover {
+    border-color: var(--color-guards-red);
+    background-color: rgba(213, 0, 28, 0.05);
+    color: rgba(213, 0, 28, 0.4);
+}
+
+.step-card.completed {
+    opacity: 0.45;
+    border-color: rgba(0, 204, 102, 0.25);
+    background-color: rgba(0, 204, 102, 0.01);
+    box-shadow: none;
+}
+
+.step-card.completed .step-node {
+    border-color: #00cc66;
+    background-color: #00cc66;
+    box-shadow: 0 0 8px #00cc66;
+}
+
+.step-card.completed .step-check-btn {
+    border-color: #00cc66;
+    background-color: rgba(0, 204, 102, 0.1);
+    color: #00cc66;
+}
+
+.step-card.completed .step-desc-ka {
+    text-decoration: line-through;
+    color: var(--color-text-grey);
+}
+
+/* Glassmorphism Hover Radial Sweep and Border Pulsations */
+@keyframes borderPulse {
+    0% { border-color: var(--color-border); }
+    50% { border-color: var(--color-border-glow); }
+    100% { border-color: var(--color-border); }
+}
+
+.glassmorphism {
+    position: relative;
+    overflow: hidden;
+}
+
+.glassmorphism::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        transparent,
+        rgba(255, 255, 255, 0.03),
+        transparent
+    );
+    transform: skewX(-25deg);
+    transition: 0.75s;
+    pointer-events: none;
+}
+
+.glassmorphism:hover::before {
+    left: 125%;
+}

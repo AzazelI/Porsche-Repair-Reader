@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Loading/Speedometer Elements
     const speedoProgress = document.getElementById("speedo-progress");
     const speedoValue = document.getElementById("speedo-value");
+    const speedoNeedle = document.getElementById("speedo-needle");
     const loadingStatusText = document.getElementById("loading-status-text");
     
     // Result Target Nodes
@@ -203,6 +204,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const offset = circumference - (percent / 100) * circumference;
         speedoProgress.style.strokeDashoffset = offset;
         
+        // Rotate needle (0% -> 0deg, 100% -> 360deg)
+        if (speedoNeedle) {
+            const degrees = (percent / 100) * 360;
+            speedoNeedle.style.transform = `rotate(${degrees}deg)`;
+        }
+        
         // Update reading value (e.g. speed scale 0 to 300)
         const speedValue = Math.round((percent / 100) * 300);
         speedoValue.textContent = speedValue;
@@ -355,15 +362,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 stepCard.innerHTML = `
                     <div class="step-node"></div>
-                    <div class="step-header">
-                        <span class="step-number">ნაბიჯი ${step.step_number}</span>
-                        <button class="btn-toggle-en" onclick="toggleStepOriginal(this)">
-                            <i class="fa-solid fa-eye"></i> ორიგინალი (EN)
+                    <div class="step-card-content-wrapper">
+                        <button class="step-check-btn" onclick="toggleStepComplete(this)" title="ნაბიჯის მონიშვნა">
+                            <i class="fa-solid fa-check"></i>
                         </button>
+                        <div class="step-card-body">
+                            <div class="step-header">
+                                <span class="step-number">ნაბიჯი ${step.step_number}</span>
+                                <button class="btn-toggle-en" onclick="toggleStepOriginal(this)">
+                                    <i class="fa-solid fa-eye"></i> ორიგინალი (EN)
+                                </button>
+                            </div>
+                            <p class="step-desc-ka">${step.description_ka}</p>
+                            <p class="step-desc-en hidden">${step.description_en}</p>
+                            ${warningHtml}
+                        </div>
                     </div>
-                    <p class="step-desc-ka">${step.description_ka}</p>
-                    <p class="step-desc-en hidden">${step.description_en}</p>
-                    ${warningHtml}
                 `;
                 stepsContainer.appendChild(stepCard);
             });
@@ -453,4 +467,10 @@ window.toggleStepOriginal = function(button) {
         enText.classList.add("hidden");
         button.innerHTML = `<i class="fa-solid fa-eye"></i> ორიგინალი (EN)`;
     }
+};
+
+// Global function to toggle step completion (needed for inline onclick)
+window.toggleStepComplete = function(button) {
+    const stepCard = button.closest(".step-card");
+    stepCard.classList.toggle("completed");
 };
