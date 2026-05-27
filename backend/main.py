@@ -4,6 +4,7 @@ import logging
 import requests
 import hashlib
 import random
+import base64
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -300,6 +301,117 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
         logger.error(f"General Error during Gemini analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str) -> dict:
+    """Encodes PDF as base64 and sends it directly to Gemini for visual OCR and analysis."""
+    if not api_key:
+        raise HTTPException(
+            status_code=400, 
+            detail="Gemini API Key is missing."
+        )
+
+    # Base64 encode the PDF file
+    try:
+        with open(pdf_path, "rb") as f:
+            pdf_data = base64.b64encode(f.read()).decode("utf-8")
+    except Exception as e:
+        logger.error(f"Error base64 encoding PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to prepare PDF data: {str(e)}")
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    
+    prompt = (
+        "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
+        "Your task is to analyze the attached PDF manual, extract all key information, "
+        "and return a highly structured JSON response in the specified schema.\n\n"
+        
+        "CRITICAL DOMAIN RULES:\n"
+        "1. LABOR TIME: Search the text carefully for any labor time, AW, or FRU quantity. For example, 'Replacing the CVT belt (7 FRU)'. If a number is specified in the text (like '7 FRU' or '7 AW'), you MUST extract that exact number and express it in FRUs (e.g., '7 FRU'). Do NOT guess or inflate the number! If no time is specified at all, only then estimate a realistic value (e.g., '12 FRU') based on complexity.\n"
+        "2. REQUIRED PARTS & CONSUMABLES ONLY: Only extract parts, materials, and consumables that are explicitly marked as mandatory replacements or applications (e.g., 'Renew clamp...', 'Lubricant Optimoly TA...'). Reusable items like screws, shaped washers, or components that are simply 'removed' and 'installed' without being marked as 'Renew' must NOT be extracted. We only want a list of items that need to be ordered/renewed. Set the status for all of them to 'renew'. Do not generate 'if_necessary' parts unless explicitly requested as optional in the text.\n"
+        "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: You must translate technical steps and parts using standard dealer-level Georgian automotive workshop terminology. Avoid literal translations at all costs!\n"
+        "   Apply this strict Glossary:\n"
+        "   - 'nut' -> 'ქანჩი' (NEVER translate as 'თხილი'! This is a critical error.)\n"
+        "   - 'bolt' -> 'ჭანჭიკი'\n"
+        "   - 'screw' -> 'ხრახნი'\n"
+        "   - 'washer' -> 'საყელური' or 'შაიბა'\n"
+        "   - 'shaped washer' -> 'ფიგურული საყელური'\n"
+        "   - 'clamp' -> 'მომჭერი საყელური' or 'დამჭერი'\n"
+        "   - 'silencer' / 'double silencer' -> 'მაყუჩი' / 'ორმაგი მაყუჩი'\n"
+        "   - 'exhaust manifold' -> 'გამონაბოლქვის კოლექტორი'\n"
+        "   - 'lubricate' / 'lubricant' -> 'შეზეთვა' / 'საპოხი მასალა'\n"
+        "   - 'tightening torque' -> 'დაჭერის მომენტი' (NEVER translate as 'გამკაცრება'!)\n"
+        "   - 'slacken' -> 'მოშვება'\n"
+        "   - 'tighten' -> 'დაჭერა'\n"
+        "   - 'recess' -> 'ჭრილი' or 'ღარი'\n"
+        "   - 'lug' -> 'შვერილი' or 'ფრთა'\n"
+        "   - 'kill switch' -> 'ძრავის ავარიული გამომრთველი'\n"
+        "   - 'ignition' -> 'ანთება'\n"
+        "   - 'centre stand' -> 'ცენტრალური სადგარი'\n"
+        "   - 'rear-wheel stand' -> 'უკანა ბორბლის სადგარი'\n\n"
+        
+        "Instructions:\n"
+        "1. Identify the Title (EN and translation in Georgian).\n"
+        "2. Identify the specific vehicle or motorcycle model name (e.g., 'R 1300 GS', 'C 400 GT', '911 Carrera S', 'Panamera'). Search the PDF pages carefully for the model designation. If not specified, look for context clues or model codes, otherwise use 'Unknown Model'.\n"
+        "3. Extract the exact labor time or FRUs listed. Format strictly as 'X FRU' (e.g., '7 FRU').\n"
+        "4. Extract required parts and consumables (with statuses set to 'renew'). For parts without part numbers, set part_number to 'N/A' or find it in the text.\n"
+        "5. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests, engine start suppression checks, or diagnostic checklists (such as extending side stands, testing automated shift assistants, or pulling clutch levers) to avoid cluttering the timeline with dozens of repetitive, non-mechanical testing bullet points. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). Translate each step accurately using the Automotive Glossary above.\n"
+        "6. Extract safety warnings or torque specs associated with steps.\n"
+        "7. Extract Special Tools required.\n"
+    )
+
+    payload = {
+        "contents": [{
+            "parts": [
+                {
+                    "inlineData": {
+                        "mimeType": "application/pdf",
+                        "data": pdf_data
+                    }
+                },
+                {
+                    "text": prompt
+                }
+            ]
+        }],
+        "generationConfig": {
+            "responseMimeType": "application/json",
+            "responseSchema": GEMINI_SCHEMA,
+            "temperature": 0.1
+        }
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        response.raise_for_status()
+        result_json = response.json()
+        
+        candidates = result_json.get("candidates", [])
+        if not candidates:
+            raise HTTPException(status_code=500, detail="Gemini API returned no candidates.")
+            
+        content_parts = candidates[0].get("content", {}).get("parts", [])
+        if not content_parts:
+            raise HTTPException(status_code=500, detail="Gemini API response content parts are empty.")
+            
+        raw_json_text = content_parts[0].get("text", "")
+        parsed_data = json.loads(raw_json_text)
+        return parsed_data
+        
+    except requests.exceptions.HTTPError as he:
+        logger.error(f"Gemini API direct PDF HTTP Error: {he} - Response: {response.text}")
+        error_msg = "Unknown Gemini API error"
+        try:
+            err_json = response.json()
+            error_msg = err_json.get("error", {}).get("message", response.text)
+        except Exception:
+            error_msg = response.text
+        raise HTTPException(status_code=502, detail=f"Gemini API returned an error: {response.status_code} - {error_msg}")
+    except json.JSONDecodeError as je:
+        logger.error(f"Failed to parse JSON from direct PDF Gemini response: {je}")
+        raise HTTPException(status_code=500, detail="Failed to parse structured JSON from Gemini API.")
+    except Exception as e:
+        logger.error(f"General Error during Gemini direct PDF analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/analyze-instruction")
 async def analyze_instruction(
     file: UploadFile = File(...),
@@ -350,15 +462,17 @@ async def analyze_instruction(
         logger.info(f"Extracting text from PDF: {file.filename}")
         extracted_text = extract_text_from_pdf(temp_file_path)
         
-        if not extracted_text.strip():
-            raise HTTPException(status_code=400, detail="No readable text found in the uploaded PDF.")
-
         # 4. Determine Gemini API Key via Rotator
         api_key = get_gemini_api_key(x_gemini_api_key)
 
         # 5. Analyze and translate with Gemini Structured Output
-        logger.info("Analyzing text with Gemini Structured Output API (Rate-Limit Safe)")
-        structured_data = analyze_with_gemini(extracted_text, api_key)
+        # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
+        if len(extracted_text.strip()) < 100:
+            logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing via Gemini...")
+            structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key)
+        else:
+            logger.info("Analyzing text with Gemini Structured Output API (Rate-Limit Safe)")
+            structured_data = analyze_with_gemini(extracted_text, api_key)
         
         # 6. Save successful response to local cache
         try:
