@@ -380,7 +380,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Badge styles
                 const isRenew = part.status.toLowerCase() === "renew";
                 const badgeClass = isRenew ? "badge-renew" : "badge-if-necessary";
-                const badgeText = isRenew ? "Renew (შეცვლა)" : "If Necessary";
+                const badgeText = isRenew ? "Renew (შეცვლა)" : "If Necessary (საჭიროებისამებრ)";
 
                 row.innerHTML = `
                     <td><span class="part-no">${part.part_number}</span></td>
