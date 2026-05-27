@@ -447,15 +447,6 @@ async def analyze_instruction(
                 with open(cache_file, "r", encoding="utf-8") as f:
                     cached_data = json.load(f)
                 logger.info(f"Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
-                
-                # In the background/safely, ensure it's archived in Supabase under proper name
-                try:
-                    model_name = cached_data.get("model_name", "Unknown_Model")
-                    repair_title = cached_data.get("title_en", "Repair_Instruction")
-                    upload_to_supabase(temp_file_path, model_name, repair_title)
-                except Exception as se:
-                    logger.error(f"Failed to ensure Supabase upload on cache hit: {se}")
-                    
                 return cached_data
             except Exception as ce:
                 logger.error(f"Error reading cached file: {ce}. Falling back to fresh analysis.")
