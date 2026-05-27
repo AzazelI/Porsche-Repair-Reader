@@ -243,7 +243,8 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
         "   - 'kill switch' -> 'ძრავის ავარიული გამომრთველი'\n"
         "   - 'ignition' -> 'ანთება'\n"
         "   - 'centre stand' -> 'ცენტრალური სადგარი'\n"
-        "   - 'rear-wheel stand' -> 'უკანა ბორბლის სადგარი'\n\n"
+        "   - 'rear-wheel stand' -> 'უკანა ბორბლის სადგარი'\n"
+        "   - 'intake snorkel' / 'snorkel' -> 'ჰაერმიმღები მილი' or 'საჰაერო მილი'\n\n"
         
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
@@ -346,7 +347,8 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str) -> dict:
         "   - 'kill switch' -> 'ძრავის ავარიული გამომრთველი'\n"
         "   - 'ignition' -> 'ანთება'\n"
         "   - 'centre stand' -> 'ცენტრალური სადგარი'\n"
-        "   - 'rear-wheel stand' -> 'უკანა ბორბლის სადგარი'\n\n"
+        "   - 'rear-wheel stand' -> 'უკანა ბორბლის სადგარი'\n"
+        "   - 'intake snorkel' / 'snorkel' -> 'ჰაერმიმღები მილი' or 'საჰაერო მილი'\n\n"
         
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
