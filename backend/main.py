@@ -205,6 +205,209 @@ def upload_to_supabase(file_path: str, model_name: str, repair_title: str) -> Op
         logger.error(f"Error during Supabase upload: {e}")
         return None
 
+# ==========================================
+# MASTER AUTOMOTIVE GLOSSARY (DEFAULT & CLOUD)
+# ==========================================
+
+DEFAULT_GLOSSARY = {
+    # Fasteners & Hardware
+    "bolt": "ჭანჭიკი",
+    "nut": "ქანჩი (NEVER translate as 'თხილი'!)",
+    "screw": "ხრახნი",
+    "washer": "საყელური (შაიბა)",
+    "spring washer": "ზამბაროვანი საყელური (გრუვერი)",
+    "shaped washer": "ფიგურული საყელური",
+    "retaining ring": "დამჭერი რგოლი (ზეგერი)",
+    "circlip": "დამჭერი რგოლი (ზეგერი)",
+    "sealing ring": "დალუქვის რგოლი",
+    "o-ring": "მრგვალი კვეთის შემამჭიდროებელი (ო-რინგი)",
+    "gasket": "საფენი (პრაკლადკა)",
+    "shim": "მარეგულირებელი საფენი",
+    "bushing": "მილისი (ვტულკა)",
+    "pin": "ქინძისთავი",
+    "cotter pin": "შპლინტი",
+    "stud": "შპილკა",
+    "thread": "ხრახნის კუთხვი (რეზბა)",
+    "rivet": "სამაგრი (კლიოპკა)",
+    "clamp": "მომჭერი საყელური (ხამუთი)",
+    "bracket": "კრონშტეინი",
+    "clip": "სამაგრი",
+    "fastener": "სამაგრი",
+    "spacer": "დისტანციური საყელური",
+    
+    # Engine & Components
+    "cylinder head": "ცილინდრების ბლოკის თავი (გალოვკა)",
+    "cylinder block": "ცილინდრების ბლოკი",
+    "crankshaft": "მუხლა ლილვი",
+    "camshaft": "გამანაწილებელი ლილვი (რასპრედვალი)",
+    "valve": "სარქველი (კლაპანი)",
+    "piston": "დგუში",
+    "piston ring": "დგუშის რგოლი (კოლცო)",
+    "spark plug": "აალების სანთელი (სვეჩი)",
+    "crankcase": "კარტერი",
+    "oil sump": "ზეთის კარტერი (პადონი)",
+    "intake manifold": "შემშვები კოლექტორი",
+    "exhaust manifold": "გამონაბოლქვის კოლექტორი",
+    "exhaust pipe": "გამონაბოლქვის მილი",
+    "silencer": "მაყუჩი",
+    "muffler": "მაყუჩი",
+    "catalytic converter": "კატალიზატორი",
+    "timing belt": "დისტრიბუციის ღვედი",
+    "timing chain": "დისტრიბუციის ჯაჭვი (ცეპი)",
+    "tensioner": "დამჭიმი (ნატიაჟიტელი)",
+    "pulley": "შკივი",
+    "flywheel": "მქნევარა (მახოვიკი)",
+    "oil pump": "ზეთის ტუმბო",
+    "water pump": "წყლის ტუმბო (პომპა)",
+    "thermostat": "თერმოსტატი",
+    "radiator": "რადიატორი",
+    "fuel injector": "საწვავის ფრქვევანა (ფარსუნკა)",
+    "throttle body": "დროსელი",
+    
+    # Transmission & Drivetrain
+    "clutch": "ქურო (კლატჩი/სცეპლენია)",
+    "gearbox": "გადაცემათა კოლოფი",
+    "transmission": "გადაცემათა კოლოფი",
+    "CVT belt": "ვარიატორის ღვედი",
+    "V-belt": "ვარიატორის ღვედი",
+    "drive belt": "ამძრავი ღვედი",
+    "variator": "ვარიატორი",
+    "drive pulley": "წამყვანი შკივი",
+    "driven pulley": "წამყოლი შკივი",
+    "sliding blocks": "ვარიატორის სლაიდერები",
+    "sliders": "ვარიატორის სლაიდერები",
+    "roller weights": "ვარიატორის გორგოლაჭები (როლიკები)",
+    "rollers": "ვარიატორის გორგოლაჭები (როლიკები)",
+    "shaft": "ლილვი",
+    "drive shaft": "ამძრავი ლილვი (პოლუოსი)",
+    "cv joint": "თანაბარი კუთხური სიჩქარის სახსარი (ყუმბარა)",
+    "differential": "დიფერენციალი",
+    "propeller shaft": "კარდანის ლილვი",
+    "cardan shaft": "კარდანის ლილვი",
+    "bearing": "საკისარი (პაჩებნიკი)",
+    "needle bearing": "ნემსისებრი საკისარი",
+    "ball bearing": "ბურთულა საკისარი",
+    "tapered roller bearing": "კონუსური საკისარი",
+    "oil seal": "ლილვის შემამჭიდროებელი (სალნიკი)",
+    "radial shaft seal": "ლილვის შემამჭიდროებელი (სალნიკი)",
+    "planetary gear": "პლანეტარული გადაცემა",
+    "gear": "კბილანა",
+    "sprocket": "კბილა თვალი",
+    
+    # Steering, Suspension & Brakes
+    "brake caliper": "მუხრუჭის სუპორტი",
+    "brake pad": "სამუხრუჭე ხუნდი (კალოდკა)",
+    "brake disc": "სამუხრუჭე დისკი",
+    "rotor": "სამუხრუჭე დისკი",
+    "brake master cylinder": "მუხრუჭის მთავარი ცილინდრი",
+    "shock absorber": "ამორტიზატორი",
+    "strut": "ამორტიზატორის საყრდენი (სტოიკა)",
+    "spring": "ზამბარა",
+    "control arm": "დაკიდების ბერკეტი (გიტარა)",
+    "wishbone": "დაკიდების ბერკეტი (გიტარა)",
+    "ball joint": "სფერული საყრდენი (შარავოი)",
+    "tie rod": "საჭის წევა",
+    "tie rod end": "საჭის წევის ბოლო (ნაკონეჩნიკი)",
+    "steering rack": "საჭის კოლოფი",
+    "wheel hub": "ბორბლის მორგვი (სტუპიცა)",
+    "wheel bearing": "სტუპიცის საკისარი",
+    "sway bar": "სტაბილიზატორი",
+    "stabilizer": "სტაბილიზატორი",
+    "stabilizer link": "სტაბილიზატორის ტიაგა (სოლდატიკი)",
+    
+    # Electrical & Diagnostic
+    "wiring harness": "სადენების კონა (პროვოდკა)",
+    "connector": "შემაერთებელი (შტეკერი)",
+    "relay": "რელე",
+    "fuse": "მცველი (პრედოხრანიტელი)",
+    "sensor": "სენსორი / გადამწოდები",
+    "oxygen sensor": "ჟანგბადის სენსორი (ლიამბდა ზონდი)",
+    "lambda sensor": "ჟანგბადის სენსორი (ლიამბდა ზონდი)",
+    "battery": "აკუმულატორი",
+    "alternator": "გენერატორი",
+    "starter motor": "სტარტერი",
+    "actuator": "ამძრავი მექანიზმი",
+    "solenoid": "სოლენოიდი",
+    "control unit": "მართვის ბლოკი",
+    "ECU": "მართვის ბლოკი",
+    "diagnostic trouble code": "შეცდომის კოდი",
+    "DTC": "შეცდომის კოდი",
+    
+    # Fluids, Lubricants & Concepts
+    "engine oil": "ძრავის ზეთი",
+    "coolant": "ანტიფრიზი",
+    "antifreeze": "ანტიფრიზი",
+    "brake fluid": "სამუხრუჭე სითხე",
+    "grease": "კონსისტენტური საპოხი (სოლიდოლი)",
+    "lubricant": "საპოხი მასალა",
+    "lubricate": "შეზეთვა",
+    "tightening torque": "დაჭერის მომენტი",
+    "standard torque": "სტანდარტული დაჭერის მომენტი",
+    "slacken": "მოშვება",
+    "tighten": "დაჭერა",
+    "remove": "მოხსნა / დემონტაჟი",
+    "install": "დაყენება / მონტაჟი",
+    "replace": "შეცვლა",
+    "renew": "შეცვლა",
+    "align": "გასწორება / ცენტრირება",
+    "press-fit": "პრესით ჩასმა",
+    "threadlocker": "ხრახნის ფიქსატორი",
+    "intake snorkel": "ჰაერმიმღები მილი",
+    "snorkel": "ჰაერმიმღები მილი",
+    "exhaust manifold": "გამონაბოლქვის კოლექტორი"
+}
+
+def fetch_glossary_from_supabase() -> dict:
+    """Fetches the technical glossary from Supabase database."""
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
+    
+    if not supabase_url or not supabase_key:
+        logger.info("Supabase not configured for dynamic glossary. Using local default glossary.")
+        return {}
+        
+    table_name = "technical_glossary"
+    url = f"{supabase_url.rstrip('/')}/rest/v1/{table_name}?select=term_en,translation_ka"
+    
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "apikey": supabase_key
+    }
+    
+    try:
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            data = response.json()
+            glossary = {row["term_en"].lower(): row["translation_ka"] for row in data if "term_en" in row and "translation_ka" in row}
+            logger.info(f"Successfully loaded {len(glossary)} glossary terms from Supabase!")
+            return glossary
+        else:
+            logger.error(f"Failed to fetch glossary from Supabase: {response.status_code} - {response.text}")
+            return {}
+    except Exception as e:
+        logger.error(f"Error fetching glossary from Supabase: {e}")
+        return {}
+
+def build_glossary_text() -> str:
+    """Combines DEFAULT_GLOSSARY and Supabase glossary, formatting as prompt bullet points."""
+    # 1. Start with local default glossary
+    glossary = DEFAULT_GLOSSARY.copy()
+    
+    # 2. Try to fetch from Supabase to overwrite/extend
+    try:
+        supabase_glossary = fetch_glossary_from_supabase()
+        if supabase_glossary:
+            glossary.update(supabase_glossary)
+    except Exception as e:
+        logger.error(f"Error merging Supabase glossary: {e}")
+        
+    # 3. Format as prompt bullet points
+    lines = []
+    for term, trans in sorted(glossary.items()):
+        lines.append(f"   - '{term}' -> '{trans}'")
+        
+    return "\n".join(lines)
+
 def analyze_with_gemini(text: str, api_key: str) -> dict:
     """Sends extracted PDF text to Gemini API and requests structured JSON output."""
     if not api_key:
@@ -216,6 +419,8 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
     # We use gemini-2.5-flash as the active high-speed model with structured schema support in v1beta
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
+    glossary_text = build_glossary_text()
+
     prompt = (
         "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
         "Your task is to analyze the following repair instruction text, extract all key information, "
@@ -226,36 +431,7 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
         "2. REQUIRED & OPTIONAL PARTS (RENEW & IF NECESSARY): Extract two types of parts/consumables: (a) Mandatory replacements/applications explicitly marked as 'Renew', 'Replace', or lubricants/grease that must be applied; set their status to 'renew'. (b) Optional replacements explicitly marked as 'if necessary', 'renew if necessary', 'replace if necessary', or 'for damage'; set their status to 'if_necessary'. Reusable hardware like standard screws or washers that are simply 'removed' and 'installed' without any replacement instruction must NOT be extracted. Also, always include the main subject of the instruction (e.g., the CVT belt or the silencer itself) with 'renew' status since it is being replaced.\n"
         "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: You must translate technical steps and parts using standard dealer-level Georgian automotive workshop terminology. Avoid literal translations at all costs!\n"
         "   Apply this strict Automotive Glossary:\n"
-        "   - 'nut' -> 'ქანჩი' (NEVER translate as 'თხილი'! This is a critical error.)\n"
-        "   - 'bolt' -> 'ჭანჭიკი'\n"
-        "   - 'screw' -> 'ხრახნი'\n"
-        "   - 'washer' -> 'საყელური' or 'შაიბა'\n"
-        "   - 'shaped washer' -> 'ფიგურული საყელური'\n"
-        "   - 'clamp' -> 'მომჭერი საყელური' or 'დამჭერი'\n"
-        "   - 'silencer' / 'double silencer' -> 'მაყუჩი' / 'ორმაგი მაყუჩი'\n"
-        "   - 'exhaust manifold' -> 'გამონაბოლქვის კოლექტორი'\n"
-        "   - 'lubricate' / 'lubricant' -> 'შეზეთვა' / 'საპოხი მასალა'\n"
-        "   - 'tightening torque' -> 'დაჭერის მომენტი' (NEVER translate as 'გამკაცრება'!)\n"
-        "   - 'slacken' -> 'მოშვება'\n"
-        "   - 'tighten' -> 'დაჭერა'\n"
-        "   - 'recess' -> 'ჭრილი' or 'ღარი'\n"
-        "   - 'lug' -> 'შვერილი' or 'ფრთა'\n"
-        "   - 'kill switch' -> 'ძრავის ავარიული გამომრთველი'\n"
-        "   - 'ignition' -> 'ანთება'\n"
-        "   - 'centre stand' -> 'ცენტრალური სადგარი'\n"
-        "   - 'rear-wheel stand' -> 'უკანა ბორბლის სადგარი'\n"
-        "   - 'intake snorkel' / 'snorkel' -> 'ჰაერმიმღები მილი' or 'საჰაერო მილი'\n"
-        "   - 'CVT belt' / 'V-belt' -> 'ვარიატორის ღვედი' (NEVER translate as 'ცვტ ქამარი'!)\n"
-        "   - 'variator' / 'drive pulley' -> 'წამყვანი შკივი (ვარიატორი)'\n"
-        "   - 'driven pulley' -> 'წამყოლი შკივი (ვარიატორი)'\n"
-        "   - 'radial shaft seal' / 'oil seal' -> 'ლილვის შემამჭიდროებელი (სალნიკი)'\n"
-        "   - 'gasket' -> 'საფენი (პრაკლადკა)'\n"
-        "   - 'variator rollers' / 'weights' / 'roller weights' -> 'ვარიატორის გორგოლაჭები (როლიკები)'\n"
-        "   - 'sliding blocks' -> 'ვარიატორის სლაიდერები'\n"
-        "   - 'thread-locking compound' / 'Loctite' -> 'ხრახნის ფიქსატორი (ლოქტაიტი)'\n"
-        "   - 'clutch' -> 'ქურო (კლატჩი/სცეპლენია)'\n"
-        "   - 'shaft' -> 'ლილვი'\n"
-        "   - 'holding tool' -> 'დამჭერი ხელსაწყო'\n\n"
+        f"{glossary_text}\n\n"
         
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
@@ -331,6 +507,8 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str) -> dict:
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
+    glossary_text = build_glossary_text()
+
     prompt = (
         "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
         "Your task is to analyze the attached PDF manual, extract all key information, "
@@ -341,36 +519,7 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str) -> dict:
         "2. REQUIRED & OPTIONAL PARTS (RENEW & IF NECESSARY): Extract two types of parts/consumables: (a) Mandatory replacements/applications explicitly marked as 'Renew', 'Replace', or lubricants/grease that must be applied; set their status to 'renew'. (b) Optional replacements explicitly marked as 'if necessary', 'renew if necessary', 'replace if necessary', or 'for damage'; set their status to 'if_necessary'. Reusable hardware like standard screws or washers that are simply 'removed' and 'installed' without any replacement instruction must NOT be extracted. Also, always include the main subject of the instruction (e.g., the CVT belt or the silencer itself) with 'renew' status since it is being replaced.\n"
         "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: You must translate technical steps and parts using standard dealer-level Georgian automotive workshop terminology. Avoid literal translations at all costs!\n"
         "   Apply this strict Glossary:\n"
-        "   - 'nut' -> 'ქანჩი' (NEVER translate as 'თხილი'! This is a critical error.)\n"
-        "   - 'bolt' -> 'ჭანჭიკი'\n"
-        "   - 'screw' -> 'ხრახნი'\n"
-        "   - 'washer' -> 'საყელური' or 'შაიბა'\n"
-        "   - 'shaped washer' -> 'ფიგურული საყელური'\n"
-        "   - 'clamp' -> 'მომჭერი საყელური' or 'დამჭერი'\n"
-        "   - 'silencer' / 'double silencer' -> 'მაყუჩი' / 'ორმაგი მაყუჩი'\n"
-        "   - 'exhaust manifold' -> 'გამონაბოლქვის კოლექტორი'\n"
-        "   - 'lubricate' / 'lubricant' -> 'შეზეთვა' / 'საპოხი მასალა'\n"
-        "   - 'tightening torque' -> 'დაჭერის მომენტი' (NEVER translate as 'გამკაცრება'!)\n"
-        "   - 'slacken' -> 'მოშვება'\n"
-        "   - 'tighten' -> 'დაჭერა'\n"
-        "   - 'recess' -> 'ჭრილი' or 'ღარი'\n"
-        "   - 'lug' -> 'შვერილი' or 'ფრთა'\n"
-        "   - 'kill switch' -> 'ძრავის ავარიული გამომრთველი'\n"
-        "   - 'ignition' -> 'ანთება'\n"
-        "   - 'centre stand' -> 'ცენტრალური სადგარი'\n"
-        "   - 'rear-wheel stand' -> 'უკანა ბორბლის სადგარი'\n"
-        "   - 'intake snorkel' / 'snorkel' -> 'ჰაერმიმღები მილი' or 'საჰაერო მილი'\n"
-        "   - 'CVT belt' / 'V-belt' -> 'ვარიატორის ღვედი' (NEVER translate as 'ცვტ ქამარი'!)\n"
-        "   - 'variator' / 'drive pulley' -> 'წამყვანი შკივი (ვარიატორი)'\n"
-        "   - 'driven pulley' -> 'წამყოლი შკივი (ვარიატორი)'\n"
-        "   - 'radial shaft seal' / 'oil seal' -> 'ლილვის შემამჭიდროებელი (სალნიკი)'\n"
-        "   - 'gasket' -> 'საფენი (პრაკლადკა)'\n"
-        "   - 'variator rollers' / 'weights' / 'roller weights' -> 'ვარიატორის გორგოლაჭები (როლიკები)'\n"
-        "   - 'sliding blocks' -> 'ვარიატორის სლაიდერები'\n"
-        "   - 'thread-locking compound' / 'Loctite' -> 'ხრახნის ფიქსატორი (ლოქტაიტი)'\n"
-        "   - 'clutch' -> 'ქურო (კლატჩი/სცეპლენია)'\n"
-        "   - 'shaft' -> 'ლილვი'\n"
-        "   - 'holding tool' -> 'დამჭერი ხელსაწყო'\n\n"
+        f"{glossary_text}\n\n"
         
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
