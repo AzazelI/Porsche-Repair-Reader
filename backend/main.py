@@ -324,11 +324,10 @@ def fetch_glossary_from_supabase() -> dict:
             return GLOSSARY_CACHE["data"]
         return {}
 
-def build_glossary_text(text: str) -> str:
+def build_glossary_text(text: Optional[str] = None) -> str:
     """
-    Combines DEFAULT_GLOSSARY and Supabase glossary, but filters to only include
-    terms that are actually mentioned in the text (case-insensitive substring match).
-    This dramatically reduces the prompt size and Gemini API latency!
+    Combines DEFAULT_GLOSSARY and Supabase glossary, formatting the ENTIRE pool
+    as prompt bullet points to guarantee 100% translation accuracy.
     """
     # 1. Start with local default glossary
     glossary = DEFAULT_GLOSSARY.copy()
@@ -341,30 +340,11 @@ def build_glossary_text(text: str) -> str:
     except Exception as e:
         logger.error(f"Error merging Supabase glossary: {e}")
         
-    # 3. Filter glossary based on word occurrences in the text
-    text_lower = text.lower()
-    filtered_glossary = {}
+    logger.info(f"Injecting full master glossary: {len(glossary)} terms into prompt.")
     
-    for term, trans in glossary.items():
-        term_clean = term.strip().lower()
-        if not term_clean:
-            continue
-        # Perform substring matching (covers words and plurals/variations)
-        if term_clean in text_lower:
-            filtered_glossary[term] = trans
-            
-    # If filtered glossary is completely empty, include a small core of common terms
-    if not filtered_glossary:
-        core_terms = ["bolt", "nut", "screw", "washer", "gasket", "seal", "clamp", "bushing", "renew", "replace"]
-        for term in core_terms:
-            if term in glossary:
-                filtered_glossary[term] = glossary[term]
-                
-    logger.info(f"Glossary filtered: {len(filtered_glossary)} / {len(glossary)} terms included in prompt.")
-    
-    # 4. Format as prompt bullet points
+    # 3. Format as prompt bullet points
     lines = []
-    for term, trans in sorted(filtered_glossary.items()):
+    for term, trans in sorted(glossary.items()):
         lines.append(f"   - '{term}' -> '{trans}'")
         
     return "\n".join(lines)
