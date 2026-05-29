@@ -5,11 +5,19 @@ import requests
 import hashlib
 import random
 import base64
+import time
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
 from glossary import GLOSSARY_1000
+
+# Dynamic Glossary In-Memory Cache configuration
+GLOSSARY_CACHE = {
+    "data": {},
+    "last_fetched": 0
+}
+GLOSSARY_CACHE_TTL = 300  # 5 minutes cache TTL
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -230,12 +238,20 @@ def upload_to_supabase(file_path: str, model_name: str, repair_title: str) -> Op
 DEFAULT_GLOSSARY = GLOSSARY_1000
 
 def fetch_glossary_from_supabase() -> dict:
-    """Fetches the technical glossary from Supabase database."""
+    """Fetches the technical glossary from Supabase database with in-memory caching."""
+    global GLOSSARY_CACHE
+    now = time.time()
+    
+    # Check if we have a valid cached version in memory
+    if GLOSSARY_CACHE["data"] and (now - GLOSSARY_CACHE["last_fetched"] < GLOSSARY_CACHE_TTL):
+        logger.info("Using in-memory cached Supabase glossary.")
+        return GLOSSARY_CACHE["data"]
+        
     supabase_url = os.getenv("SUPABASE_URL", "").strip()
     supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
     
     if not supabase_url or not supabase_key:
-        logger.info("Supabase not configured for dynamic glossary. Using local default glossary.")
+        logger.info("Supabase credentials not configured for dynamic glossary. Using local default glossary.")
         return {}
         
     table_name = "technical_glossary"
@@ -247,25 +263,40 @@ def fetch_glossary_from_supabase() -> dict:
     }
     
     try:
+        logger.info("Fetching dynamic glossary from Supabase database...")
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             data = response.json()
             glossary = {row["term_en"].lower(): row["translation_ka"] for row in data if "term_en" in row and "translation_ka" in row}
             logger.info(f"Successfully loaded {len(glossary)} glossary terms from Supabase!")
+            
+            # Update memory cache
+            GLOSSARY_CACHE["data"] = glossary
+            GLOSSARY_CACHE["last_fetched"] = now
             return glossary
         else:
             logger.error(f"Failed to fetch glossary from Supabase: {response.status_code} - {response.text}")
+            if GLOSSARY_CACHE["data"]:
+                logger.info("Returning stale in-memory glossary cache.")
+                return GLOSSARY_CACHE["data"]
             return {}
     except Exception as e:
         logger.error(f"Error fetching glossary from Supabase: {e}")
+        if GLOSSARY_CACHE["data"]:
+            logger.info("Returning stale in-memory glossary cache after exception.")
+            return GLOSSARY_CACHE["data"]
         return {}
 
-def build_glossary_text() -> str:
-    """Combines DEFAULT_GLOSSARY and Supabase glossary, formatting as prompt bullet points."""
+def build_glossary_text(text: str) -> str:
+    """
+    Combines DEFAULT_GLOSSARY and Supabase glossary, but filters to only include
+    terms that are actually mentioned in the text (case-insensitive substring match).
+    This dramatically reduces the prompt size and Gemini API latency!
+    """
     # 1. Start with local default glossary
     glossary = DEFAULT_GLOSSARY.copy()
     
-    # 2. Try to fetch from Supabase to overwrite/extend
+    # 2. Try to fetch from Supabase to overwrite/extend (utilizes in-memory caching)
     try:
         supabase_glossary = fetch_glossary_from_supabase()
         if supabase_glossary:
@@ -273,12 +304,90 @@ def build_glossary_text() -> str:
     except Exception as e:
         logger.error(f"Error merging Supabase glossary: {e}")
         
-    # 3. Format as prompt bullet points
+    # 3. Filter glossary based on word occurrences in the text
+    text_lower = text.lower()
+    filtered_glossary = {}
+    
+    for term, trans in glossary.items():
+        term_clean = term.strip().lower()
+        if not term_clean:
+            continue
+        # Perform substring matching (covers words and plurals/variations)
+        if term_clean in text_lower:
+            filtered_glossary[term] = trans
+            
+    # If filtered glossary is completely empty, include a small core of common terms
+    if not filtered_glossary:
+        core_terms = ["bolt", "nut", "screw", "washer", "gasket", "seal", "clamp", "bushing", "renew", "replace"]
+        for term in core_terms:
+            if term in glossary:
+                filtered_glossary[term] = glossary[term]
+                
+    logger.info(f"Glossary filtered: {len(filtered_glossary)} / {len(glossary)} terms included in prompt.")
+    
+    # 4. Format as prompt bullet points
     lines = []
-    for term, trans in sorted(glossary.items()):
+    for term, trans in sorted(filtered_glossary.items()):
         lines.append(f"   - '{term}' -> '{trans}'")
         
     return "\n".join(lines)
+
+def get_cached_analysis_from_supabase(file_hash: str) -> Optional[dict]:
+    """Retrieves a cached JSON analysis from Supabase Storage by file hash (100% persistent cache)."""
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
+    
+    if not supabase_url or not supabase_key:
+        return None
+        
+    bucket_name = "repair-manuals"
+    cache_filename = f"cache_{file_hash}.json"
+    url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{cache_filename}"
+    
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "apikey": supabase_key
+    }
+    
+    try:
+        logger.info(f"Checking Supabase Storage for cached analysis: {cache_filename}")
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            logger.info(f"Persistent Cache HIT for {file_hash} from Supabase!")
+            return response.json()
+        return None
+    except Exception as e:
+        logger.error(f"Error checking persistent cache in Supabase: {e}")
+        return None
+
+def upload_cached_analysis_to_supabase(file_hash: str, data: dict):
+    """Uploads a parsed JSON analysis to Supabase Storage for persistent caching across builds/restarts."""
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
+    
+    if not supabase_url or not supabase_key:
+        return
+        
+    bucket_name = "repair-manuals"
+    cache_filename = f"cache_{file_hash}.json"
+    url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{cache_filename}"
+    
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "apikey": supabase_key,
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        logger.info(f"Uploading persistent cache {cache_filename} to Supabase Storage...")
+        json_data = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+        response = requests.post(url, data=json_data, headers=headers)
+        if response.status_code == 200:
+            logger.info(f"Successfully saved persistent cache in Supabase!")
+        else:
+            logger.error(f"Failed to upload persistent cache to Supabase: {response.status_code} - {response.text}")
+    except Exception as e:
+        logger.error(f"Error uploading persistent cache to Supabase: {e}")
 
 def analyze_with_gemini(text: str, api_key: str) -> dict:
     """Sends extracted PDF text to Gemini API and requests structured JSON output."""
@@ -291,7 +400,7 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
     # We use gemini-2.5-flash as the active high-speed model with structured schema support in v1beta
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
-    glossary_text = build_glossary_text()
+    glossary_text = build_glossary_text(text)
 
     prompt = (
         "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
@@ -353,7 +462,7 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
             error_msg = err_json.get("error", {}).get("message", response.text)
         except Exception:
             error_msg = response.text
-        raise HTTPException(status_code=502, detail=f"Gemini API returned an error: {response.status_code} - {error_msg}")
+        raise HTTPException(status_code=520, detail=f"Gemini API returned an error: {response.status_code} - {error_msg}")
     except json.JSONDecodeError as je:
         logger.error(f"Failed to parse JSON from Gemini response: {je}")
         raise HTTPException(status_code=500, detail="Failed to parse structured JSON from Gemini API.")
@@ -361,7 +470,7 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
         logger.error(f"General Error during Gemini analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str) -> dict:
+def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, extracted_text: Optional[str] = None) -> dict:
     """Encodes PDF as base64 and sends it directly to Gemini for visual OCR and analysis."""
     if not api_key:
         raise HTTPException(
@@ -379,7 +488,7 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str) -> dict:
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
     
-    glossary_text = build_glossary_text()
+    glossary_text = build_glossary_text(extracted_text if extracted_text else "")
 
     prompt = (
         "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
@@ -480,19 +589,35 @@ async def analyze_instruction(
         file_hash = compute_sha256(temp_file_path)
         logger.info(f"Computing SHA-256 for file: {file.filename} -> {file_hash}")
         
-        # 2. Check local response cache
+        # 2. Check local cache, then check Supabase Storage for persistent cache
         cache_dir = "cache"
         os.makedirs(cache_dir, exist_ok=True)
         cache_file = os.path.join(cache_dir, f"{file_hash}.json")
         
+        cached_data = None
+        # Check local cache first (super fast)
         if os.path.exists(cache_file):
             try:
                 with open(cache_file, "r", encoding="utf-8") as f:
                     cached_data = json.load(f)
-                logger.info(f"Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
-                return cached_data
+                logger.info(f"Local Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
             except Exception as ce:
-                logger.error(f"Error reading cached file: {ce}. Falling back to fresh analysis.")
+                logger.error(f"Error reading local cached file: {ce}. Falling back to persistent cache check.")
+                
+        # If local cache missed/failed, check persistent Supabase Storage cache
+        if not cached_data:
+            cached_data = get_cached_analysis_from_supabase(file_hash)
+            if cached_data:
+                # Save it locally for future hits
+                try:
+                    with open(cache_file, "w", encoding="utf-8") as f:
+                        json.dump(cached_data, f, ensure_ascii=False, indent=2)
+                    logger.info(f"Saved downloaded cache locally for hash: {file_hash}")
+                except Exception as cse:
+                    logger.error(f"Failed to write downloaded cache locally: {cse}")
+                    
+        if cached_data:
+            return cached_data
 
         # 3. Extract text from the PDF
         logger.info(f"Extracting text from PDF: {file.filename}")
@@ -518,7 +643,7 @@ async def analyze_instruction(
                 # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
                 if len(extracted_text.strip()) < 100:
                     logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing via Gemini...")
-                    structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key)
+                    structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key, extracted_text)
                 else:
                     logger.info("Analyzing text with Gemini Structured Output API (Rate-Limit Safe)")
                     structured_data = analyze_with_gemini(extracted_text, api_key)
@@ -539,11 +664,14 @@ async def analyze_instruction(
                 detail=f"Gemini API returned an error (all keys in pool exhausted): {str(last_error)}"
             )
         
-        # 6. Save successful response to local cache
+        # 6. Save successful response to local cache and persistent Supabase Storage cache
         try:
             with open(cache_file, "w", encoding="utf-8") as f:
                 json.dump(structured_data, f, ensure_ascii=False, indent=2)
-            logger.info(f"Saved new analysis to cache: {cache_file}")
+            logger.info(f"Saved new analysis to local cache: {cache_file}")
+            
+            # Upload to persistent Supabase Storage cache!
+            upload_cached_analysis_to_supabase(file_hash, structured_data)
         except Exception as cse:
             logger.error(f"Failed to write response to cache: {cse}")
             
