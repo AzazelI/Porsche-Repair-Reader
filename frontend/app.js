@@ -52,6 +52,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     let savedApiUrl = localStorage.getItem("backend_api_url") || DEFAULT_API_URL;
+    // Auto-migrate suspended Render URLs to the new stable Hugging Face backend
+    if (savedApiUrl.includes("onrender.com") || savedApiUrl.includes("render.com")) {
+        savedApiUrl = DEFAULT_API_URL;
+        localStorage.setItem("backend_api_url", DEFAULT_API_URL);
+    }
     apiUrlInput.value = savedApiUrl;
 
     // Driving Mode Selector (Normal / Sport / Track Themes)
