@@ -19,9 +19,32 @@ GLOSSARY_CACHE = {
 }
 GLOSSARY_CACHE_TTL = 300  # 5 minutes cache TTL
 
-# Configure logging
+# Configure logging with dynamic in-memory buffer diagnostics
+class MemoryLogHandler(logging.Handler):
+    def __init__(self, capacity=150):
+        super().__init__()
+        self.capacity = capacity
+        self.buffer = []
+
+    def emit(self, record):
+        try:
+            log_entry = self.format(record)
+            self.buffer.append(log_entry)
+            if len(self.buffer) > self.capacity:
+                self.buffer.pop(0)
+        except Exception:
+            self.handleError(record)
+
+# Initialize memory handler
+memory_log_handler = MemoryLogHandler()
+memory_log_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("repair_instruction_reader")
+
+# Add memory handler to loggers
+logging.getLogger().addHandler(memory_log_handler)
+logger.addHandler(memory_log_handler)
 
 app = FastAPI(title="Porsche Repair Instruction Reader API")
 
@@ -783,6 +806,11 @@ def test_gemini():
             
     return {"status": "diagnostics_complete", "results": results}
 
+@app.get("/logs")
+def get_logs():
+    """Returns the last 150 log lines for active debugging."""
+    return {"logs": memory_log_handler.buffer}
+
 # Direct root route for Hugging Face Spaces health check and ingress routing discovery
 @app.get("/")
 def read_root():
@@ -790,7 +818,7 @@ def read_root():
     return {
         "message": "Porsche Repair Instruction Reader API is running successfully!",
         "status": "healthy",
-        "endpoints": ["/health", "/test-supabase", "/test-gemini", "/analyze-instruction"]
+        "endpoints": ["/health", "/test-supabase", "/test-gemini", "/logs", "/analyze-instruction"]
     }
 
 @app.get("/health")
