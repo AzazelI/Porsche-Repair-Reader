@@ -2,7 +2,7 @@
 title: Porsche Repair Reader
 emoji: 🏎️
 colorFrom: red
-colorTo: black
+colorTo: gray
 sdk: docker
 pinned: false
 ---
