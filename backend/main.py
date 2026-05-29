@@ -598,6 +598,15 @@ def test_gemini():
             
     return {"status": "diagnostics_complete", "results": results}
 
+@app.get("/")
+def read_root():
+    """Root route for Hugging Face health probes and status check."""
+    return {
+        "message": "Porsche Repair Instruction Reader API is running successfully!",
+        "status": "healthy",
+        "endpoints": ["/health", "/test-supabase", "/test-gemini", "/analyze-instruction"]
+    }
+
 @app.get("/health")
 @app.head("/health")
 def health_check():
@@ -609,3 +618,4 @@ if __name__ == "__main__":
     # Read port from environment or default to 8000
     port = int(os.getenv("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+
