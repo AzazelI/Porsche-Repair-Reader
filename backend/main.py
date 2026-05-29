@@ -860,7 +860,9 @@ async def analyze_instruction(
                     masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
                     logger.info(f"Attempting Groq analysis using key {attempt + 1}/{len(groq_keys)} (masked: {masked_key})")
                     
-                    groq_models = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "mixtral-8x7b-32768"]
+                    # Using active models and adding high-TPM models (llama-3.1-8b-instant, gemma2-9b-it) 
+                    # as extremely stable fallback models for larger manuals that exceed 70B's 6,000 TPM limit!
+                    groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
                     key_succeeded = False
                     
                     for model_name in groq_models:
