@@ -389,7 +389,7 @@ def upload_cached_analysis_to_supabase(file_hash: str, data: dict):
     except Exception as e:
         logger.error(f"Error uploading persistent cache to Supabase: {e}")
 
-def analyze_with_gemini(text: str, api_key: str) -> dict:
+def analyze_with_gemini(text: str, api_key: str, model_name: str = "gemini-2.5-flash") -> dict:
     """Sends extracted PDF text to Gemini API and requests structured JSON output."""
     if not api_key:
         raise HTTPException(
@@ -397,8 +397,8 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
             detail="Gemini API Key is missing. Please set GEMINI_API_KEY environment variable or provide X-Gemini-API-Key header."
         )
 
-    # We use gemini-2.5-flash as the active high-speed model with structured schema support in v1beta
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    # Parametric model URL
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
     
     glossary_text = build_glossary_text(text)
 
@@ -437,7 +437,8 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
     }
 
     try:
-        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        # Added protective 45-second timeout to prevent hanging on dead or overloaded keys
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=45)
         response.raise_for_status()
         result_json = response.json()
         
@@ -470,7 +471,7 @@ def analyze_with_gemini(text: str, api_key: str) -> dict:
         logger.error(f"General Error during Gemini analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, extracted_text: Optional[str] = None) -> dict:
+def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: str = "gemini-2.5-flash", extracted_text: Optional[str] = None) -> dict:
     """Encodes PDF as base64 and sends it directly to Gemini for visual OCR and analysis."""
     if not api_key:
         raise HTTPException(
@@ -486,7 +487,7 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, extracted_text
         logger.error(f"Error base64 encoding PDF: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to prepare PDF data: {str(e)}")
 
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
     
     glossary_text = build_glossary_text(extracted_text if extracted_text else "")
 
@@ -534,7 +535,8 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, extracted_text
     }
 
     try:
-        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        # Added protective 45-second timeout to prevent hanging on dead or overloaded keys
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=45)
         response.raise_for_status()
         result_json = response.json()
         
@@ -634,28 +636,37 @@ async def analyze_instruction(
         structured_data = None
         last_error = None
 
-        # 5. Try each API key in the pool sequentially until one succeeds
+        # 5. Try each API key in the pool, and for each key try model fallbacks until one succeeds
         for attempt, api_key in enumerate(keys):
             masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
             logger.info(f"Attempting analysis using key {attempt + 1}/{len(keys)} (masked: {masked_key})")
             
-            try:
-                # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
-                if len(extracted_text.strip()) < 100:
-                    logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing via Gemini...")
-                    structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key, extracted_text)
-                else:
-                    logger.info("Analyzing text with Gemini Structured Output API (Rate-Limit Safe)")
-                    structured_data = analyze_with_gemini(extracted_text, api_key)
-                
-                # If successful, break the loop!
-                logger.info(f"Analysis successful using key index {attempt}!")
-                break
-            except Exception as e:
-                logger.warning(f"Attempt {attempt + 1} using key {masked_key} failed: {e}")
-                last_error = e
-                # Fallback to the next key in the pool
-                continue
+            # Robust model fallback pool to defeat transient 503 high-demand free-tier spikes
+            models_to_try = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+            key_succeeded = False
+            
+            for model_name in models_to_try:
+                try:
+                    logger.info(f"Trying model '{model_name}' with key {attempt + 1}...")
+                    # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
+                    if len(extracted_text.strip()) < 100:
+                        logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing...")
+                        structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key, model_name, extracted_text)
+                    else:
+                        logger.info(f"Analyzing text with model '{model_name}' Structured Output API")
+                        structured_data = analyze_with_gemini(extracted_text, api_key, model_name)
+                    
+                    logger.info(f"Analysis successful using key index {attempt} and model '{model_name}'!")
+                    key_succeeded = True
+                    break # Break out of the model loop since we succeeded!
+                except Exception as e:
+                    logger.warning(f"Model '{model_name}' failed with key {masked_key}: {e}")
+                    last_error = e
+                    # Fallback to the next model in the pool for this key
+                    continue
+            
+            if key_succeeded:
+                break # Break out of the keys loop since we succeeded!
 
         if not structured_data:
             logger.error(f"All {len(keys)} Gemini keys in the pool failed. Final error: {last_error}")
