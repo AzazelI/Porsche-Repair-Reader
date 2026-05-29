@@ -10,6 +10,7 @@ from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
+import fitz  # PyMuPDF for 10x-50x faster PDF parsing
 from glossary import GLOSSARY_1000
 
 # Dynamic Glossary In-Memory Cache configuration
@@ -122,18 +123,31 @@ GEMINI_SCHEMA = {
 }
 
 def extract_text_from_pdf(pdf_path: str) -> str:
-    """Extracts text content from PDF file using pdfplumber."""
+    """Extracts text content from PDF file using PyMuPDF (10x-50x faster than pdfplumber)."""
     text_content = []
     try:
-        with pdfplumber.open(pdf_path) as pdf:
-            for page_num, page in enumerate(pdf.pages):
-                page_text = page.extract_text()
-                if page_text:
-                    text_content.append(page_text)
-        return "\n".join(text_content)
+        logger.info("Extracting PDF text using PyMuPDF...")
+        doc = fitz.open(pdf_path)
+        for page in doc:
+            page_text = page.get_text()
+            if page_text:
+                text_content.append(page_text)
+        extracted = "\n".join(text_content)
+        logger.info(f"PyMuPDF successfully extracted {len(extracted)} characters.")
+        return extracted
     except Exception as e:
-        logger.error(f"Error reading PDF: {e}")
-        raise HTTPException(status_code=400, detail=f"Failed to read PDF file: {str(e)}")
+        logger.error(f"Error reading PDF with PyMuPDF: {e}. Falling back to pdfplumber...")
+        try:
+            text_content = []
+            with pdfplumber.open(pdf_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_content.append(page_text)
+            return "\n".join(text_content)
+        except Exception as pe:
+            logger.error(f"Fallback pdfplumber also failed: {pe}")
+            raise HTTPException(status_code=400, detail=f"Failed to read PDF file: {str(pe)}")
 
 def compute_sha256(file_path: str) -> str:
     """Computes the SHA-256 hash of a file."""
