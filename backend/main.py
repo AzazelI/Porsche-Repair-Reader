@@ -659,7 +659,7 @@ async def analyze_instruction(
             logger.info(f"Attempting analysis using key {attempt + 1}/{len(keys)} (masked: {masked_key})")
             
             # Robust model fallback pool to defeat transient 503 high-demand free-tier spikes
-            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
             key_succeeded = False
             
             for model_name in models_to_try:
