@@ -6,6 +6,7 @@ import hashlib
 import random
 import base64
 import time
+import re
 from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -202,6 +203,23 @@ def get_all_gemini_api_keys(header_key: Optional[str]) -> List[str]:
     random.shuffle(keys)
     return keys
 
+def get_groq_api_keys(header_key: Optional[str] = None) -> List[str]:
+    """
+    Returns a shuffled list of all available Groq API keys.
+    Prioritizes the header key if passed.
+    """
+    if header_key:
+        return [header_key.strip()]
+        
+    env_keys = os.getenv("GROQ_API_KEY", "")
+    if not env_keys:
+        return []
+        
+    keys = [k.strip() for k in env_keys.split(",") if k.strip()]
+    # Shuffle to distribute load randomly
+    random.shuffle(keys)
+    return keys
+
 def upload_to_supabase(file_path: str, model_name: str, repair_title: str) -> Optional[str]:
     """Uploads the PDF manual to Supabase Storage bucket using custom named path and prevents duplication."""
     supabase_url = os.getenv("SUPABASE_URL", "").strip()
@@ -324,10 +342,24 @@ def fetch_glossary_from_supabase() -> dict:
             return GLOSSARY_CACHE["data"]
         return {}
 
+def normalize_text_for_matching(text: str) -> str:
+    """Helper to clean and normalize text for robust fuzzy matching."""
+    if not text:
+        return ""
+    # Remove soft hyphens and line-break hyphens
+    t = re.sub(r'-\s*\n\s*', '', text)
+    # Lowercase
+    t = t.lower()
+    # Replace non-alphanumeric characters with spaces
+    t = re.sub(r'[^a-z0-9]', ' ', t)
+    # Collapse multiple spaces
+    return ' '.join(t.split())
+
 def build_glossary_text(text: Optional[str] = None) -> str:
     """
-    Combines DEFAULT_GLOSSARY and Supabase glossary, formatting the ENTIRE pool
-    as prompt bullet points to guarantee 100% translation accuracy.
+    Combines DEFAULT_GLOSSARY and Supabase glossary, and filters it down
+    to only terms relevant to the provided text to save tokens, using a
+    highly robust and generous matching algorithm to prevent translation regressions.
     """
     # 1. Start with local default glossary
     glossary = DEFAULT_GLOSSARY.copy()
@@ -340,9 +372,60 @@ def build_glossary_text(text: Optional[str] = None) -> str:
     except Exception as e:
         logger.error(f"Error merging Supabase glossary: {e}")
         
-    logger.info(f"Injecting full master glossary: {len(glossary)} terms into prompt.")
+    # 3. Filter glossary if text is provided
+    if text:
+        norm_pdf = normalize_text_for_matching(text)
+        pdf_words = set(norm_pdf.split())
+        
+        relevant = {}
+        for term, translation in glossary.items():
+            norm_term = normalize_text_for_matching(term)
+            if not norm_term:
+                continue
+                
+            term_words = norm_term.split()
+            
+            # Match condition A: Direct substring in normalized PDF text (handles singular/plural and exact matches)
+            if norm_term in norm_pdf:
+                relevant[term] = translation
+                continue
+                
+            # Match condition B: For single-word terms, check singular/plural variations in PDF word-list
+            if len(term_words) == 1:
+                w = term_words[0]
+                variations = [w]
+                if w.endswith('y'):
+                    variations.append(w[:-1] + 'ies')
+                elif w.endswith('ies'):
+                    variations.append(w[:-3] + 'y')
+                elif w.endswith('s'):
+                    variations.append(w[:-1])
+                else:
+                    variations.append(w + 's')
+                    variations.append(w + 'es')
+                
+                if any(var in pdf_words for var in variations):
+                    relevant[term] = translation
+                    continue
+                    
+            # Match condition C: For multi-word terms, check if all significant words are in the PDF word-list
+            if len(term_words) > 1:
+                sig_words = [w for w in term_words if len(w) >= 3]
+                if sig_words and all(w in pdf_words for w in sig_words):
+                    relevant[term] = translation
+                    continue
+                    
+            # Match condition D: Check if the term is a substring of any word in the PDF word-list
+            if any(norm_term in word for word in pdf_words if len(word) >= len(norm_term)):
+                relevant[term] = translation
+                continue
+                
+        logger.info(f"Dynamic Glossary Filter: Reduced list from {len(glossary)} to {len(relevant)} terms.")
+        glossary = relevant
+    else:
+        logger.info(f"Injecting full master glossary: {len(glossary)} terms into prompt.")
     
-    # 3. Format as prompt bullet points
+    # 4. Format as prompt bullet points
     lines = []
     for term, trans in sorted(glossary.items()):
         lines.append(f"   - '{term}' -> '{trans}'")
@@ -488,6 +571,94 @@ def analyze_with_gemini(text: str, api_key: str, model_name: str = "gemini-2.5-f
         logger.error(f"General Error during Gemini analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.3-70b-versatile") -> dict:
+    """Sends extracted PDF text to Groq API using OpenAI-compatible chat completions with JSON mode and compressed prompts."""
+    if not api_key:
+        raise HTTPException(
+            status_code=400,
+            detail="Groq API Key is missing."
+        )
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    glossary_text = build_glossary_text(text)
+
+    # Compressed and optimized prompt for Groq to save tokens
+    prompt = (
+        "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
+        "Analyze the following repair instruction text, extract all key information, "
+        "and return a highly structured JSON response in the specified schema.\n\n"
+        
+        "CRITICAL DOMAIN RULES:\n"
+        "1. LABOR TIME: Search the text carefully for labor time, AW, or FRU quantity (e.g. 'Replace silencer (4 FRU)'). If specified, extract the exact number and express in FRUs (e.g., '4 FRU'). Do NOT guess or inflate. If none specified, estimate a realistic value based on complexity.\n"
+        "2. PARTS (RENEW/IF NECESSARY): Extract parts for replacement: (a) Mandatory replacements ('Renew', 'Replace', lubricants/grease) as 'renew'; (b) Optional replacements ('if necessary', 'for damage') as 'if_necessary'. Reusable hardware simply removed/installed without replacement instruction must NOT be extracted. Always include the main subject with 'renew' status.\n"
+        "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: Use standard dealer-level Georgian automotive terminology. Avoid literal translations!\n"
+        "   Strictly apply this Automotive Glossary:\n"
+        f"{glossary_text}\n\n"
+        
+        "JSON SCHEMA:\n"
+        f"{json.dumps(GEMINI_SCHEMA, ensure_ascii=False)}\n\n"
+        
+        "Instructions:\n"
+        "1. Identify title (EN and translation in Georgian).\n"
+        "2. Identify specific vehicle/motorcycle model name (e.g. 'R 1300 GS', '911 Carrera S'). If not found, use 'Unknown Model'.\n"
+        "3. Format labor time strictly as 'X FRU'.\n"
+        "4. For parts without numbers, set part_number to 'N/A'.\n"
+        "5. Sequence step-by-step repair instruction steps focusing strictly on physical mechanical work (Disassembly, Main work, Reassembly). Ignore/highly summarize generic post-repair function tests (e.g. engine start checks, side stand tests) to avoid clutter. Keep timeline logical and focused (10-20 steps max). Translate using Glossary.\n"
+        "6. Extract safety warnings or torque specs.\n"
+        "7. Extract special tools.\n\n"
+        f"Repair Instruction Text:\n{text}"
+    )
+
+    payload = {
+        "model": model_name,
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a precise technical translator. You must return valid JSON matching the requested schema."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "response_format": {"type": "json_object"},
+        "temperature": 0.1
+    }
+
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=45)
+        response.raise_for_status()
+        result_json = response.json()
+        
+        choices = result_json.get("choices", [])
+        if not choices:
+            raise HTTPException(status_code=500, detail="Groq API returned no choices.")
+            
+        raw_json_text = choices[0].get("message", {}).get("content", "")
+        parsed_data = json.loads(raw_json_text)
+        return parsed_data
+        
+    except requests.exceptions.HTTPError as he:
+        logger.error(f"Groq API HTTP Error: {he} - Response: {response.text}")
+        error_msg = "Unknown Groq API error"
+        try:
+            err_json = response.json()
+            error_msg = err_json.get("error", {}).get("message", response.text)
+        except Exception:
+            error_msg = response.text
+        raise HTTPException(status_code=520, detail=f"Groq API error: {response.status_code} - {error_msg}")
+    except json.JSONDecodeError as je:
+        logger.error(f"Failed to parse JSON from Groq response: {je}")
+        raise HTTPException(status_code=500, detail="Failed to parse structured JSON from Groq API.")
+    except Exception as e:
+        logger.error(f"General Error during Groq analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: str = "gemini-2.5-flash", extracted_text: Optional[str] = None) -> dict:
     """Encodes PDF as base64 and sends it directly to Gemini for visual OCR and analysis."""
     if not api_key:
@@ -588,11 +759,12 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
 @app.post("/analyze-instruction")
 async def analyze_instruction(
     file: UploadFile = File(...),
-    x_gemini_api_key: Optional[str] = Header(None)
+    x_gemini_api_key: Optional[str] = Header(None),
+    x_groq_api_key: Optional[str] = Header(None)
 ):
     """
     Uploads a Porsche Repair Instruction PDF, extracts the text, 
-    and returns a structured, translated JSON analysis (utilizing SHA-256 caching and key rotation).
+    and returns a structured, translated JSON analysis (utilizing SHA-256 caching and dual-provider fallback).
     Saves PDF to Supabase Storage with dynamic naming ([Model]_[RepairTitle].pdf) and duplicate prevention.
     """
     if not file.filename.lower().endswith(".pdf"):
@@ -642,54 +814,75 @@ async def analyze_instruction(
         logger.info(f"Extracting text from PDF: {file.filename}")
         extracted_text = extract_text_from_pdf(temp_file_path)
         
-        # 4. Retrieve all available Gemini API Keys
-        keys = get_all_gemini_api_keys(x_gemini_api_key)
-        if not keys:
-            raise HTTPException(
-                status_code=400,
-                detail="Gemini API Key missing. Please provide it in the X-Gemini-API-Key header or set GEMINI_API_KEY environment variable."
-            )
-
         structured_data = None
         last_error = None
 
-        # 5. Try each API key in the pool, and for each key try model fallbacks until one succeeds
-        for attempt, api_key in enumerate(keys):
-            masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
-            logger.info(f"Attempting analysis using key {attempt + 1}/{len(keys)} (masked: {masked_key})")
-            
-            # Robust model fallback pool to defeat transient 503 high-demand free-tier spikes
-            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
-            key_succeeded = False
-            
-            for model_name in models_to_try:
-                try:
-                    logger.info(f"Trying model '{model_name}' with key {attempt + 1}...")
-                    # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
-                    if len(extracted_text.strip()) < 100:
-                        logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing...")
-                        structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key, model_name, extracted_text)
-                    else:
-                        logger.info(f"Analyzing text with model '{model_name}' Structured Output API")
-                        structured_data = analyze_with_gemini(extracted_text, api_key, model_name)
+        # 4. Try Gemini Provider first (if keys are available)
+        gemini_keys = get_all_gemini_api_keys(x_gemini_api_key)
+        if gemini_keys:
+            for attempt, api_key in enumerate(gemini_keys):
+                masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
+                logger.info(f"Attempting Gemini analysis using key {attempt + 1}/{len(gemini_keys)} (masked: {masked_key})")
+                
+                # Robust model fallback pool to defeat transient 503 high-demand free-tier spikes
+                models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+                key_succeeded = False
+                
+                for model_name in models_to_try:
+                    try:
+                        logger.info(f"Trying Gemini model '{model_name}'...")
+                        # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
+                        if len(extracted_text.strip()) < 100:
+                            logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing...")
+                            structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key, model_name, extracted_text)
+                        else:
+                            logger.info(f"Analyzing text with Gemini model '{model_name}' Structured Output API")
+                            structured_data = analyze_with_gemini(extracted_text, api_key, model_name)
+                        
+                        logger.info(f"Gemini analysis successful using key index {attempt} and model '{model_name}'!")
+                        key_succeeded = True
+                        break # Break out of the model loop since we succeeded!
+                    except Exception as e:
+                        logger.warning(f"Gemini model '{model_name}' failed with key {masked_key}: {e}")
+                        last_error = e
+                        # Fallback to the next model in the pool for this key
+                        continue
+                
+                if key_succeeded:
+                    break # Break out of the keys loop since we succeeded!
+
+        # 5. Groq Provider Fallback (if Gemini failed or no Gemini keys configured)
+        if not structured_data:
+            groq_keys = get_groq_api_keys(x_groq_api_key)
+            if groq_keys:
+                logger.info(f"Proceeding with Groq API fallback. Available keys: {len(groq_keys)}")
+                for attempt, api_key in enumerate(groq_keys):
+                    masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
+                    logger.info(f"Attempting Groq analysis using key {attempt + 1}/{len(groq_keys)} (masked: {masked_key})")
                     
-                    logger.info(f"Analysis successful using key index {attempt} and model '{model_name}'!")
-                    key_succeeded = True
-                    break # Break out of the model loop since we succeeded!
-                except Exception as e:
-                    logger.warning(f"Model '{model_name}' failed with key {masked_key}: {e}")
-                    last_error = e
-                    # Fallback to the next model in the pool for this key
-                    continue
-            
-            if key_succeeded:
-                break # Break out of the keys loop since we succeeded!
+                    groq_models = ["llama-3.3-70b-versatile", "llama-3.1-70b-versatile", "mixtral-8x7b-32768"]
+                    key_succeeded = False
+                    
+                    for model_name in groq_models:
+                        try:
+                            logger.info(f"Trying Groq model '{model_name}'...")
+                            structured_data = analyze_with_groq(extracted_text, api_key, model_name)
+                            logger.info(f"Groq analysis successful using key index {attempt} and model '{model_name}'!")
+                            key_succeeded = True
+                            break
+                        except Exception as e:
+                            logger.warning(f"Groq model '{model_name}' failed with key {masked_key}: {e}")
+                            last_error = e
+                            continue
+                            
+                    if key_succeeded:
+                        break
 
         if not structured_data:
-            logger.error(f"All {len(keys)} Gemini keys in the pool failed. Final error: {last_error}")
+            logger.error(f"All configured AI providers (Gemini/Groq) failed. Final error: {last_error}")
             raise HTTPException(
                 status_code=502,
-                detail=f"Gemini API returned an error (all keys in pool exhausted): {str(last_error)}"
+                detail=f"All configured AI providers failed. Final error: {str(last_error)}"
             )
         
         # 6. Save successful response to local cache and persistent Supabase Storage cache
@@ -784,6 +977,48 @@ def test_gemini():
         
         try:
             response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+            results.append({
+                "key_index": i,
+                "key_preview": masked_key,
+                "status_code": response.status_code,
+                "response_text": response.text[:200]
+            })
+        except Exception as e:
+            results.append({
+                "key_index": i,
+                "key_preview": masked_key,
+                "status_code": "error",
+                "error": str(e)
+            })
+            
+    return {"status": "diagnostics_complete", "results": results}
+
+@app.get("/test-groq")
+def test_groq():
+    """Diagnostic endpoint to test all Groq API keys in the pool and return exact responses."""
+    env_keys = os.getenv("GROQ_API_KEY", "")
+    if not env_keys:
+        return {"status": "error", "message": "GROQ_API_KEY not set in environment variables."}
+        
+    keys = [k.strip() for k in env_keys.split(",") if k.strip()]
+    results = []
+    
+    for i, key in enumerate(keys):
+        masked_key = key[:10] + "..." if len(key) > 10 else key
+        
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [{"role": "user", "content": "Respond with exactly 'OK'"}],
+            "temperature": 0.1
+        }
+        
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=15)
             results.append({
                 "key_index": i,
                 "key_preview": masked_key,
