@@ -579,6 +579,11 @@ def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.3-70b-
             detail="Groq API Key is missing."
         )
 
+    # Smart truncation to respect Groq's 6,000 TPM and context limits on free tier
+    if len(text) > 15000:
+        logger.info(f"Truncating text from {len(text)} to 15000 characters to prevent Groq TPM rate limits.")
+        text = text[:15000] + "\n... [Remaining text truncated to fit rate limits] ..."
+
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -860,9 +865,9 @@ async def analyze_instruction(
                     masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
                     logger.info(f"Attempting Groq analysis using key {attempt + 1}/{len(groq_keys)} (masked: {masked_key})")
                     
-                    # Using active models and adding high-TPM models (llama-3.1-8b-instant, gemma2-9b-it) 
+                    # Using active models and adding high-TPM models (llama-3.1-8b-instant, qwen/qwen3-32b) 
                     # as extremely stable fallback models for larger manuals that exceed 70B's 6,000 TPM limit!
-                    groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it"]
+                    groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen/qwen3-32b"]
                     key_succeeded = False
                     
                     for model_name in groq_models:
