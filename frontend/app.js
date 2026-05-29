@@ -4,7 +4,7 @@
 
 document.addEventListener("DOMContentLoaded", () => {
     // API Configuration - Set fallback directly to production so it works out-of-the-box for everyone
-    const DEFAULT_API_URL = "https://porsche-repair-reader.onrender.com";
+    const DEFAULT_API_URL = "https://azazel-porsche-repair-reader.hf.space";
     
     // Core UI Nodes
     const uploadSection = document.getElementById("upload-section");
