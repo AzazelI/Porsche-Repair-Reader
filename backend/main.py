@@ -821,6 +821,49 @@ def health_check():
     """Health check endpoint."""
     return {"status": "ok", "api_key_configured": bool(os.getenv("GEMINI_API_KEY"))}
 
+@app.get("/clear-cache/{file_hash}")
+def clear_cache(file_hash: str):
+    """Deletes cached JSON files locally and in Supabase Storage to force a fresh analysis."""
+    cache_file = os.path.join("cache", f"{file_hash}.json")
+    local_cleared = False
+    if os.path.exists(cache_file):
+        try:
+            os.remove(cache_file)
+            local_cleared = True
+            logger.info(f"Cleared local cache for file hash: {file_hash}")
+        except Exception as e:
+            logger.error(f"Failed to delete local cache file: {e}")
+            
+    supabase_cleared = False
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
+    
+    if supabase_url and supabase_key:
+        bucket_name = "repair-manuals"
+        cache_filename = f"cache_{file_hash}.json"
+        url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}"
+        headers = {
+            "Authorization": f"Bearer {supabase_key}",
+            "apikey": supabase_key
+        }
+        try:
+            logger.info(f"Deleting from Supabase Storage: {cache_filename}")
+            response = requests.delete(url, json={"prefixes": [cache_filename]}, headers=headers)
+            if response.status_code == 200:
+                supabase_cleared = True
+                logger.info(f"Cleared persistent Supabase cache for file hash: {file_hash}")
+            else:
+                logger.error(f"Failed to delete Supabase cache: {response.status_code} - {response.text}")
+        except Exception as e:
+            logger.error(f"Error deleting Supabase cache: {e}")
+            
+    return {
+        "status": "success",
+        "message": f"Cache cleared for hash {file_hash}",
+        "local_cleared": local_cleared,
+        "supabase_cleared": supabase_cleared
+    }
+
 if __name__ == "__main__":
     import uvicorn
     # Read port from environment or default to 8000
