@@ -858,6 +858,13 @@ async def analyze_instruction(
 
         # 5. Groq Provider Fallback (if Gemini failed or no Gemini keys configured)
         if not structured_data:
+            if len(extracted_text.strip()) < 100:
+                logger.warning("Extracted text is too short for Groq fallback (likely scanned image PDF). Skipping Groq.")
+                raise HTTPException(
+                    status_code=502,
+                    detail="Gemini API-ს კვოტა ამოწურულია. ატვირთული ფაილი არის დასკანერებული სურათი (ვიზუალური PDF), რომლის წასაკითხადაც აუცილებელია Gemini-ს კამერის/OCR მხარდაჭერა. Groq-ს არ შეუძლია სურათების დამუშავება."
+                )
+                
             groq_keys = get_groq_api_keys(x_groq_api_key)
             if groq_keys:
                 logger.info(f"Proceeding with Groq API fallback. Available keys: {len(groq_keys)}")
