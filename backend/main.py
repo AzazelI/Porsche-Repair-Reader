@@ -598,6 +598,7 @@ def test_gemini():
             
     return {"status": "diagnostics_complete", "results": results}
 
+# Direct root route for Hugging Face Spaces health check and ingress discovery
 @app.get("/")
 def read_root():
     """Root route for Hugging Face health probes and status check."""
