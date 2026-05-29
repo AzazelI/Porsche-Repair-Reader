@@ -20,5 +20,5 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git remote add hf https://Azazel:$HF_TOKEN@huggingface.co/spaces/Azazel/porsche-repair-reader
+          git remote add hf https://AzazeI:$HF_TOKEN@huggingface.co/spaces/AzazeI/porsche-repair-reader
           git push --force hf HEAD:refs/heads/main
