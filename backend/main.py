@@ -140,6 +140,23 @@ def get_gemini_api_key(header_key: Optional[str]) -> str:
         
     return random.choice(keys)
 
+def get_all_gemini_api_keys(header_key: Optional[str]) -> List[str]:
+    """
+    Returns a shuffled list of all available Gemini API keys.
+    Prioritizes the header key if passed.
+    """
+    if header_key:
+        return [header_key.strip()]
+        
+    env_keys = os.getenv("GEMINI_API_KEY", "")
+    if not env_keys:
+        return []
+        
+    keys = [k.strip() for k in env_keys.split(",") if k.strip()]
+    # Shuffle to distribute load randomly
+    random.shuffle(keys)
+    return keys
+
 def upload_to_supabase(file_path: str, model_name: str, repair_title: str) -> Optional[str]:
     """Uploads the PDF manual to Supabase Storage bucket using custom named path and prevents duplication."""
     supabase_url = os.getenv("SUPABASE_URL", "").strip()
@@ -481,17 +498,46 @@ async def analyze_instruction(
         logger.info(f"Extracting text from PDF: {file.filename}")
         extracted_text = extract_text_from_pdf(temp_file_path)
         
-        # 4. Determine Gemini API Key via Rotator
-        api_key = get_gemini_api_key(x_gemini_api_key)
+        # 4. Retrieve all available Gemini API Keys
+        keys = get_all_gemini_api_keys(x_gemini_api_key)
+        if not keys:
+            raise HTTPException(
+                status_code=400,
+                detail="Gemini API Key missing. Please provide it in the X-Gemini-API-Key header or set GEMINI_API_KEY environment variable."
+            )
 
-        # 5. Analyze and translate with Gemini Structured Output
-        # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
-        if len(extracted_text.strip()) < 100:
-            logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing via Gemini...")
-            structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key)
-        else:
-            logger.info("Analyzing text with Gemini Structured Output API (Rate-Limit Safe)")
-            structured_data = analyze_with_gemini(extracted_text, api_key)
+        structured_data = None
+        last_error = None
+
+        # 5. Try each API key in the pool sequentially until one succeeds
+        for attempt, api_key in enumerate(keys):
+            masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
+            logger.info(f"Attempting analysis using key {attempt + 1}/{len(keys)} (masked: {masked_key})")
+            
+            try:
+                # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
+                if len(extracted_text.strip()) < 100:
+                    logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing via Gemini...")
+                    structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key)
+                else:
+                    logger.info("Analyzing text with Gemini Structured Output API (Rate-Limit Safe)")
+                    structured_data = analyze_with_gemini(extracted_text, api_key)
+                
+                # If successful, break the loop!
+                logger.info(f"Analysis successful using key index {attempt}!")
+                break
+            except Exception as e:
+                logger.warning(f"Attempt {attempt + 1} using key {masked_key} failed: {e}")
+                last_error = e
+                # Fallback to the next key in the pool
+                continue
+
+        if not structured_data:
+            logger.error(f"All {len(keys)} Gemini keys in the pool failed. Final error: {last_error}")
+            raise HTTPException(
+                status_code=502,
+                detail=f"Gemini API returned an error (all keys in pool exhausted): {str(last_error)}"
+            )
         
         # 6. Save successful response to local cache
         try:
