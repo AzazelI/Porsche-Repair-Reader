@@ -2263,71 +2263,61 @@ body.body-rumble {
 }
 
 /* ==========================================
-   PIWIS AI VOICE ASSISTANT FLOATING WIDGET
+   GWEN AI CHAT & VOICE ASSISTANT FLOATING PANEL
    ========================================== */
-.piwis-voice-panel {
+.gwen-voice-panel {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    padding: 12px 20px;
-    border-radius: 40px;
-    display: flex;
-    align-items: center;
-    gap: 15px;
+    width: 320px;
+    border-radius: 20px;
     border: 1px solid rgba(0, 230, 118, 0.2);
     box-shadow: 0 0 25px rgba(0, 230, 118, 0.08), var(--box-shadow-premium);
     z-index: 9999;
-    background: rgba(12, 12, 14, 0.85);
-    backdrop-filter: blur(10px);
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    background: rgba(12, 12, 14, 0.9);
+    backdrop-filter: blur(15px);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.piwis-voice-panel:hover {
-    border-color: rgba(0, 230, 118, 0.4);
+.gwen-voice-panel.expanded {
+    width: 360px;
+    border-color: rgba(0, 230, 118, 0.35);
     box-shadow: 0 0 35px rgba(0, 230, 118, 0.15), var(--box-shadow-premium);
 }
 
-.piwis-mic-wrapper {
-    position: relative;
-    width: 42px;
-    height: 42px;
+.gwen-header {
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.3s ease;
 }
 
-.piwis-mic-btn {
-    width: 42px;
-    height: 42px;
+.gwen-voice-panel.expanded .gwen-header {
+    border-color: var(--color-border);
+}
+
+.gwen-avatar-wrapper {
+    position: relative;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
-    border: none;
     background-color: rgba(0, 230, 118, 0.1);
     color: #00e676;
-    font-size: 16px;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s ease;
-    z-index: 2;
-    position: relative;
+    font-size: 16px;
+    flex-shrink: 0;
 }
 
-.piwis-mic-btn:hover {
-    background-color: rgba(0, 230, 118, 0.2);
-    transform: scale(1.05);
-}
-
-/* Active listening microphone style */
-.piwis-voice-panel.listening {
-    border-color: rgba(0, 230, 118, 0.6);
-    box-shadow: 0 0 30px rgba(0, 230, 118, 0.25);
-}
-
-.piwis-voice-panel.listening .piwis-mic-btn {
-    background-color: #00e676;
-    color: #0c0c0e;
-    box-shadow: 0 0 15px #00e676;
-}
-
-.mic-wave {
+.gwen-avatar-pulse {
     position: absolute;
     top: 0;
     left: 0;
@@ -2336,41 +2326,222 @@ body.body-rumble {
     border-radius: 50%;
     border: 2px solid #00e676;
     opacity: 0;
-    z-index: 1;
-    pointer-events: none;
+    animation: gwen-pulse 2s infinite ease-out;
 }
 
-.piwis-voice-panel.listening .mic-wave {
-    animation: mic-wave-pulse 1.5s infinite ease-out;
+@keyframes gwen-pulse {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(1.6); opacity: 0; }
 }
 
-@keyframes mic-wave-pulse {
-    0% { transform: scale(1); opacity: 0.8; }
-    100% { transform: scale(2.2); opacity: 0; }
-}
-
-.piwis-text-area {
+.gwen-text-area {
     display: flex;
     flex-direction: column;
-    min-width: 150px;
-    max-width: 250px;
+    flex: 1;
+    overflow: hidden;
 }
 
-.piwis-brand {
+.gwen-brand {
     font-size: 10px;
     font-weight: 800;
     color: #00e676;
-    letter-spacing: 1.5px;
+    letter-spacing: 2px;
     text-transform: uppercase;
 }
 
-.piwis-voice-status {
-    font-size: 12px;
+.gwen-voice-status {
+    font-size: 11px;
     font-weight: 500;
-    color: var(--color-text-white);
+    color: var(--color-text-grey);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.gwen-toggle-btn {
+    background: none;
+    border: none;
+    color: var(--color-text-grey);
+    cursor: pointer;
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.gwen-voice-panel.expanded .gwen-toggle-btn {
+    transform: rotate(180deg);
+}
+
+/* Chat Window */
+.gwen-chat-window {
+    display: flex;
+    flex-direction: column;
+    height: 320px;
+    transition: all 0.3s ease;
+}
+
+.gwen-chat-window.hidden {
+    display: none !important;
+    height: 0;
+}
+
+.gwen-chat-history {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background-color: rgba(6, 6, 8, 0.3);
+}
+
+/* Chat Scrollbar */
+.gwen-chat-history::-webkit-scrollbar {
+    width: 4px;
+}
+.gwen-chat-history::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 2px;
+}
+
+.chat-message {
+    max-width: 85%;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.chat-message.gwen {
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--color-border);
+    align-self: flex-start;
+    border-top-left-radius: 2px;
+    color: var(--color-text-white);
+}
+
+.chat-message.technician {
+    background-color: rgba(0, 230, 118, 0.1);
+    border: 1px solid rgba(0, 230, 118, 0.2);
+    align-self: flex-end;
+    border-top-right-radius: 2px;
+    color: #fff;
+}
+
+.chat-sender {
+    font-size: 9px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.chat-message.gwen .chat-sender {
+    color: #00e676;
+}
+
+.chat-message.technician .chat-sender {
+    color: #80ffc2;
+}
+
+.chat-text {
+    margin: 0;
+    word-break: break-word;
+}
+
+.gwen-chat-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid var(--color-border);
+    background-color: rgba(12, 12, 14, 0.95);
+}
+
+.gwen-mic-btn-chat {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: var(--color-text-grey);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.gwen-mic-btn-chat:hover {
+    background-color: rgba(0, 230, 118, 0.1);
+    color: #00e676;
+}
+
+.gwen-voice-panel.listening .gwen-mic-btn-chat {
+    background-color: #00e676;
+    color: #0c0c0e;
+    box-shadow: 0 0 10px #00e676;
+}
+
+.gwen-mic-wave {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    border: 2px solid #00e676;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.gwen-voice-panel.listening .gwen-mic-wave {
+    animation: mic-wave-pulse 1.5s infinite ease-out;
+}
+
+#gwen-chat-input {
+    flex: 1;
+    height: 36px;
+    background-color: rgba(6, 6, 8, 0.6);
+    border: 1px solid var(--color-border);
+    border-radius: 18px;
+    padding: 0 15px;
+    color: var(--color-text-white);
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.3s ease;
+    min-width: 50px;
+}
+
+#gwen-chat-input:focus {
+    border-color: rgba(0, 230, 118, 0.4);
+}
+
+.gwen-send-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background-color: rgba(0, 230, 118, 0.1);
+    color: #00e676;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.gwen-send-btn:hover {
+    background-color: #00e676;
+    color: #0c0c0e;
+    box-shadow: 0 0 10px #00e676;
 }
 
 /* ==========================================
@@ -2383,7 +2554,7 @@ body.body-rumble {
         font-family: 'Outfit', sans-serif !important;
     }
     
-    .porsche-navbar, .upload-section, .loading-section, .action-footer, .porsche-footer, #settings-toggle, .piwis-voice-panel, .porsche-mode-selector, .chrono-widget, .telemetry-graph-wrapper {
+    .porsche-navbar, .upload-section, .loading-section, .action-footer, .porsche-footer, #settings-toggle, .gwen-voice-panel, .porsche-mode-selector, .chrono-widget, .telemetry-graph-wrapper {
         display: none !important;
     }
     

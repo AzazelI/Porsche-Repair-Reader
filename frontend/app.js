@@ -1281,14 +1281,53 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ==========================================
-    // PIWIS AI VOICE ASSISTANT CLIENT ENGINE
+    // GWEN AI CHAT & VOICE ASSISTANT CLIENT ENGINE
     // ==========================================
-    const piwisMicBtn = document.getElementById("piwis-mic-btn");
-    const piwisPanel = document.getElementById("piwis-voice-panel");
-    const piwisStatus = document.getElementById("piwis-voice-status");
+    const gwenVoicePanel = document.getElementById("gwen-voice-panel");
+    const gwenHeaderToggle = document.getElementById("gwen-header-toggle");
+    const gwenChatWindow = document.getElementById("gwen-chat-window");
+    const gwenChatHistory = document.getElementById("gwen-chat-history");
+    const gwenChatInput = document.getElementById("gwen-chat-input");
+    const gwenSendBtn = document.getElementById("gwen-send-btn");
+    const gwenMicBtn = document.getElementById("gwen-mic-btn");
+    const gwenStatus = document.getElementById("gwen-voice-status");
     
     let voiceRecognition = null;
     let isListening = false;
+    
+    // Toggle expand/collapse chatbot panel
+    if (gwenHeaderToggle) {
+        gwenHeaderToggle.addEventListener("click", () => {
+            gwenVoicePanel.classList.toggle("expanded");
+            gwenChatWindow.classList.toggle("hidden");
+            
+            // Auto scroll chat history to bottom on expand
+            if (!gwenChatWindow.classList.contains("hidden")) {
+                setTimeout(() => {
+                    gwenChatHistory.scrollTop = gwenChatHistory.scrollHeight;
+                }, 100);
+            }
+        });
+    }
+    
+    function appendChatMessage(sender, text, isUser = false) {
+        if (!gwenChatHistory) return;
+        
+        const msgDiv = document.createElement("div");
+        msgDiv.className = `chat-message ${isUser ? 'technician' : 'gwen'}`;
+        
+        // Convert double asterisks to bold tag for markdown look
+        let formattedText = text;
+        formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        msgDiv.innerHTML = `
+            <span class="chat-sender">${sender}</span>
+            <p class="chat-text">${formattedText}</p>
+        `;
+        
+        gwenChatHistory.appendChild(msgDiv);
+        gwenChatHistory.scrollTop = gwenChatHistory.scrollHeight;
+    }
     
     function speakText(text) {
         if ('speechSynthesis' in window) {
@@ -1310,52 +1349,55 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    function initializePIWISVoice() {
+    function initializeGWENVoice() {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SpeechRecognition) {
-            if (piwisStatus) piwisStatus.textContent = "ხმის მართვა არ არის მხარდაჭერილი";
+            if (gwenStatus) gwenStatus.textContent = "ხმის მართვა არ არის მხარდაჭერილი";
             return;
         }
         
         voiceRecognition = new SpeechRecognition();
-        voiceRecognition.continuous = true;
+        voiceRecognition.continuous = false; // Stop after speaking a command for chat flow
         voiceRecognition.interimResults = false;
         voiceRecognition.lang = "ka-GE"; // Georgian locale
         
         voiceRecognition.onstart = () => {
             isListening = true;
-            if (piwisPanel) piwisPanel.classList.add("listening");
-            if (piwisStatus) piwisStatus.textContent = "გისმენთ... (PIWIS Active)";
+            if (gwenVoicePanel) gwenVoicePanel.classList.add("listening");
+            if (gwenStatus) gwenStatus.textContent = "გისმენთ... (Gwen Active)";
         };
         
         voiceRecognition.onend = () => {
             isListening = false;
-            if (piwisPanel) piwisPanel.classList.remove("listening");
-            if (piwisStatus) piwisStatus.textContent = "Standby (დააწკაპუნეთ სალაპარაკოდ)";
+            if (gwenVoicePanel) gwenVoicePanel.classList.remove("listening");
+            if (gwenStatus) gwenStatus.textContent = "Standby (დააწკაპუნეთ სალაპარაკოდ)";
         };
         
         voiceRecognition.onresult = (event) => {
             const resultIndex = event.resultIndex;
-            const transcript = event.results[resultIndex][0].transcript.trim().toLowerCase();
+            const transcript = event.results[resultIndex][0].transcript.trim();
             
-            if (piwisStatus) piwisStatus.textContent = `გავიგე: "${transcript}"`;
+            // 1. Append user's spoken command to chat
+            appendChatMessage("Technician", transcript, true);
             
-            processVoiceCommand(transcript);
+            // 2. Process command
+            processVoiceCommand(transcript.toLowerCase());
         };
         
         voiceRecognition.onerror = (e) => {
-            console.warn("PIWIS recognition error:", e);
-            if (piwisStatus) piwisStatus.textContent = "ხმა ვერ იქნა ამოცნობილი";
+            console.warn("Gwen recognition error:", e);
+            if (gwenStatus) gwenStatus.textContent = "ხმა ვერ იქნა ამოცნობილი";
         };
     }
     
     function processVoiceCommand(command) {
         const steps = document.querySelectorAll(".step-card");
         
-        // R1200GS persistent cache search and load simulation
+        // Command 0: R1200GS persistent cache search and load simulation
         if ((command.includes("ახსენი") || command.includes("მოძებნე") || command.includes("ჩატვირთე") || command.includes("explain") || command.includes("load")) && 
             (command.includes("r1200gs") || command.includes("r 1200") || command.includes("მოტოციკლი") || command.includes("ზეთი") || command.includes("oil"))) {
             
+            appendChatMessage("Gwen AI", "R1200GS-ის ზეთის შეცვლის ინსტრუქცია **მოიძებნა სუპაბეისის pgvector RAG ბაზაში**. ვიწყებ ჩატვირთვას...");
             speakText("R1200GS-ის ზეთის შეცვლის ინსტრუქცია მოიძებნა სუპაბეისის ქეში. ვიწყებ ჩატვირთვას.");
             
             setTimeout(() => {
@@ -1417,6 +1459,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     const rData = DEMO_DATA.r1200gs;
                     renderDashboard(rData);
+                    
+                    appendChatMessage("Gwen AI", "BMW R1200GS-ის სარემონტო დაფა წარმატებით მომზადდა. **ნაბიჯი 1:** მოათავსეთ მოტოციკლი ცენტრალურ სადგამზე.");
                     speakText("BMW R1200GS-ის ზეთის შეცვლის ინსტრუქცია წარმატებით ჩაიტვირთა სუპაბეისის მეხსიერებიდან. პირველი ნაბიჯი: მოათავსეთ მოტოციკლი ცენტრალურ სადგამზე.");
                 }, 1500); 
             }, 1000);
@@ -1431,6 +1475,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const checkBtn = activeStep.querySelector(".step-check-btn");
                 if (checkBtn) {
                     checkBtn.click();
+                    appendChatMessage("Gwen AI", "ნაბიჯი მონიშნულია შესრულებულად! გადავდივართ მომდევნო ეტაპზე...");
                     speakText("ნაბიჯი შესრულებულია");
                     
                     setTimeout(() => {
@@ -1438,13 +1483,16 @@ document.addEventListener("DOMContentLoaded", () => {
                         if (nextStep) {
                             nextStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             const text = nextStep.querySelector(".step-desc-ka").textContent;
+                            appendChatMessage("Gwen AI", `**${nextStep.querySelector(".step-number").textContent}:** ${text}`);
                             speakText("შემდეგი ნაბიჯი: " + text);
                         } else {
+                            appendChatMessage("Gwen AI", "ყველა ნაბიჯი წარმატებით შესრულებულია! **სამუშაო ბარათი მზადაა.**");
                             speakText("ყველა ნაბიჯი წარმატებით შესრულებულია! სამუშაო ბარათი მზადაა.");
                         }
                     }, 500);
                 }
             } else {
+                appendChatMessage("Gwen AI", "ყველა ნაბიჯი უკვე დასრულებულია.");
                 speakText("ყველა ნაბიჯი დასრულებულია");
             }
         }
@@ -1459,9 +1507,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     checkBtn.click();
                     lastCompleted.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     const text = lastCompleted.querySelector(".step-desc-ka").textContent;
+                    appendChatMessage("Gwen AI", `დავბრუნდით წინა ნაბიჯზე: ${text}`);
                     speakText("დავბრუნდით წინა ნაბიჯზე: " + text);
                 }
             } else {
+                appendChatMessage("Gwen AI", "ჩვენ უკვე პირველ ნაბიჯზე ვართ.");
                 speakText("პირველ ნაბიჯზე ვართ");
             }
         }
@@ -1472,8 +1522,10 @@ document.addEventListener("DOMContentLoaded", () => {
             if (activeStep) {
                 const stepNum = activeStep.querySelector(".step-number").textContent;
                 const text = activeStep.querySelector(".step-desc-ka").textContent;
+                appendChatMessage("Gwen AI", `**კითხულობს:** ${stepNum}. ${text}`);
                 speakText(stepNum + ". " + text);
             } else {
+                appendChatMessage("Gwen AI", "სარემონტო ინსტრუქცია არ არის ჩატვირთული.");
                 speakText("ინსტრუქცია არ არის ჩატვირთული");
             }
         }
@@ -1491,8 +1543,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (targetStep) {
                     targetStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     const text = targetStep.querySelector(".step-desc-ka").textContent;
+                    appendChatMessage("Gwen AI", `გადავედით **ნაბიჯზე ${targetNum}**: ${text}`);
                     speakText("ნაბიჯი " + targetNum + ": " + text);
                 } else {
+                    appendChatMessage("Gwen AI", `ნაბიჯი ${targetNum} ვერ მოიძებნა.`);
                     speakText("ნაბიჯი " + targetNum + " ვერ მოიძებნა");
                 }
             }
@@ -1503,25 +1557,66 @@ document.addEventListener("DOMContentLoaded", () => {
             const details = document.querySelectorAll("#details-container li strong");
             if (details.length > 0) {
                 let specsText = "დაჭერის ძალებია: ";
+                let specsHtml = "**დაჭერის მომენტები:**<br>";
                 details.forEach(detail => {
                     specsText += detail.textContent + ". ";
+                    specsHtml += `- ${detail.textContent}<br>`;
                 });
+                appendChatMessage("Gwen AI", specsHtml);
                 speakText(specsText);
             } else {
+                appendChatMessage("Gwen AI", "ძალები ან დაჭერის მომენტები მითითებული არ არის.");
                 speakText("დაჭერის ძალები მითითებული არ არის");
             }
         }
         
         // Command 6: Greeting/Test
-        else if (command.includes("პივის") || command.includes("ჰელოუ") || command.includes("hello")) {
-            speakText("გისმენთ! მე ვარ PIWIS AI, თქვენი ხმოვანი ასისტენტი. შემიძლია წავიკითხო სარემონტო ნაბიჯები და ძალები.");
+        else if (command.includes("gwen") || command.includes("გვენ") || command.includes("პივის") || command.includes("ჰელოუ") || command.includes("hello")) {
+            appendChatMessage("Gwen AI", "გისმენთ! მე ვარ **Gwen AI**, თქვენი კოკპიტის ასისტენტი. შემიძლია ჩავტვირთო სარემონტო ინსტრუქციები, წავიკითხო ნაბიჯები და დაჭერის ძალები.");
+            speakText("გისმენთ! მე ვარ გვენ ეიაი, თქვენი კოკპიტის ასისტენტი. შემიძლია წავიკითხო სარემონტო ნაბიჯები და დაჭერის ძალები.");
+        }
+        
+        // Unrecognized text entry: fallback AI chat bubble
+        else {
+            appendChatMessage("Gwen AI", "მე შემიძლია დაგეხმაროთ R1200GS, 911 GT3, Cayenne ან Taycan-ის სარემონტო სამუშაოებში. მკითხეთ ნებისმიერი რამ, ან მითხარით: „ახსენი r1200gs ზეთის შეცვლა“.");
+            speakText("რითი შემიძლია დაგეხმაროთ?");
         }
     }
     
-    if (piwisMicBtn) {
-        piwisMicBtn.addEventListener("click", () => {
+    // Setup chat send handlers
+    function handleChatMessageSubmit() {
+        if (!gwenChatInput) return;
+        const text = gwenChatInput.value.trim();
+        if (!text) return;
+        
+        // 1. Append technician's typed text to chat
+        appendChatMessage("Technician", text, true);
+        
+        // 2. Clear input
+        gwenChatInput.value = "";
+        
+        // 3. Process the text command
+        setTimeout(() => {
+            processVoiceCommand(text.toLowerCase());
+        }, 300);
+    }
+    
+    if (gwenSendBtn) {
+        gwenSendBtn.addEventListener("click", handleChatMessageSubmit);
+    }
+    
+    if (gwenChatInput) {
+        gwenChatInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                handleChatMessageSubmit();
+            }
+        });
+    }
+    
+    if (gwenMicBtn) {
+        gwenMicBtn.addEventListener("click", () => {
             if (!voiceRecognition) {
-                initializePIWISVoice();
+                initializeGWENVoice();
             }
             
             if (voiceRecognition) {
