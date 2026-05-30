@@ -2560,6 +2560,8 @@ body.body-rumble {
         background: #ffffff !important;
         color: #000000 !important;
         font-family: 'Outfit', sans-serif !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
     
     .porsche-navbar, .upload-section, .loading-section, .action-footer, .porsche-footer, #settings-toggle, .gwen-voice-panel, .porsche-mode-selector, .chrono-widget, .telemetry-graph-wrapper {
@@ -2576,12 +2578,29 @@ body.body-rumble {
         display: block !important;
     }
     
-    /* Full print layouts expansion */
-    .dashboard-grid, .right-pane, .summary-cards, .table-container, .panel, .steps-container {
+    /* Full print layouts expansion (excluding summary cards to preserve side-by-side grid) */
+    .dashboard-grid, .right-pane, .table-container, .panel, .steps-container {
         display: block !important;
         overflow: visible !important;
         height: auto !important;
         max-height: none !important;
+    }
+    
+    .summary-cards {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 15px !important;
+        margin-bottom: 20px !important;
+        overflow: visible !important;
+        height: auto !important;
+    }
+    
+    .summary-card {
+        padding: 10px 15px !important;
+        margin-bottom: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
     }
     
     .glassmorphism {
@@ -2591,16 +2610,16 @@ body.body-rumble {
         box-shadow: none !important;
         backdrop-filter: none !important;
         border-radius: 8px !important;
-        margin-bottom: 20px !important;
-        padding: 20px !important;
+        margin-bottom: 12px !important;
+        padding: 15px !important;
     }
     
     /* Print Header decoration */
     .instruction-header-title {
         border-bottom: 3px double #000000 !important;
         border-top: 1px solid #000000 !important;
-        padding: 15px 0 !important;
-        margin-bottom: 30px !important;
+        padding: 12px 0 !important;
+        margin-bottom: 20px !important;
         position: relative;
     }
     
@@ -2640,8 +2659,8 @@ body.body-rumble {
     
     .panel-header {
         border-bottom: 2px solid #000000 !important;
-        padding-bottom: 8px !important;
-        margin-bottom: 15px !important;
+        padding-bottom: 6px !important;
+        margin-bottom: 12px !important;
     }
     
     .panel-header h2 {
@@ -2661,8 +2680,8 @@ body.body-rumble {
         background: #ffffff !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        padding: 15px !important;
-        margin-bottom: 15px !important;
+        padding: 10px 14px !important;
+        margin-bottom: 8px !important;
         border-radius: 4px !important;
     }
     
@@ -2691,16 +2710,21 @@ body.body-rumble {
     }
     
     .step-desc-en {
-        color: #444444 !important;
-        font-size: 12px !important;
+        color: #555555 !important;
+        font-size: 11px !important;
         border-left: 2px solid #666666 !important;
         display: block !important; /* Always show English on printout for safety */
+        margin-top: 4px !important;
+        padding-left: 8px !important;
+        font-style: italic;
     }
     
     .step-warning {
         background: #fdf2f2 !important;
         border: 1px solid #d5001c !important;
         border-left: 4px solid #d5001c !important;
+        padding: 8px 12px !important;
+        margin-top: 6px !important;
     }
     
     .warning-text-ka, .warning-text-en {
@@ -2713,12 +2737,13 @@ body.body-rumble {
         color: #000000 !important;
         border-bottom: 2px solid #000000 !important;
         font-size: 11px !important;
+        padding: 8px 10px !important;
     }
     
     .parts-table td {
         border-bottom: 1px solid #cccccc !important;
         color: #000000 !important;
-        padding: 10px 12px !important;
+        padding: 8px 10px !important;
     }
     
     .part-no {
@@ -2786,6 +2811,20 @@ body.body-rumble {
     /* Add master technician signoff dynamically */
     .dashboard-grid {
         position: relative;
+    }
+    
+    /* Premium Compact Special Tools Layout */
+    .tools-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 10px !important;
+    }
+    
+    .tool-card {
+        border: 1px solid #cccccc !important;
+        background: #fdfdfd !important;
+        padding: 8px 12px !important;
+        margin-bottom: 0 !important;
     }
     
     /* Embed beautiful signature area */
