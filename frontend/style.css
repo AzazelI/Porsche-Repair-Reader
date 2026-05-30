@@ -2826,6 +2826,55 @@ body.body-rumble {
         padding: 8px 12px !important;
         margin-bottom: 0 !important;
     }
+
+    .tool-card .tool-name-ka {
+        color: #000000 !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+    }
+    
+    .tool-card .tool-name-en {
+        color: #333333 !important;
+        font-size: 11px !important;
+        font-style: italic !important;
+    }
+    
+    .tool-card .tool-no {
+        color: #000000 !important;
+        font-weight: 800 !important;
+        font-size: 13px !important;
+    }
+
+    /* Prevent page break inside key panels/sections */
+    .parts-panel, .details-panel, .tools-panel, .instruction-header-title, .summary-cards {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    /* Premium Legibility for printed English translations and metadata */
+    .detail-en {
+        color: #333333 !important;
+        font-size: 11px !important;
+        display: block !important;
+        margin-top: 3px !important;
+        font-style: italic !important;
+    }
+    
+    .part-title-en {
+        color: #444444 !important;
+        font-size: 11px !important;
+        display: block !important;
+        margin-top: 2px !important;
+    }
+    
+    #details-container li {
+        color: #000000 !important;
+        margin-bottom: 8px !important;
+    }
+    
+    #details-container li strong {
+        color: #000000 !important;
+    }
     
     /* Embed beautiful signature area */
     .dashboard-section::after {
