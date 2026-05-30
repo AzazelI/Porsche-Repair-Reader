@@ -419,17 +419,38 @@
         </div>
     </div>
 
-    <!-- PIWIS AI Voice Assistant Panel -->
-    <div id="piwis-voice-panel" class="piwis-voice-panel glassmorphism">
-        <div class="piwis-mic-wrapper">
-            <button id="piwis-mic-btn" class="piwis-mic-btn" aria-label="Toggle PIWIS Voice Assistant" title="PIWIS Voice Assistant (ხმოვანი მართვა)">
-                <i class="fa-solid fa-microphone"></i>
-                <span class="mic-wave"></span>
+    <!-- GWEN AI Voice & Chat Assistant Panel -->
+    <div id="gwen-voice-panel" class="gwen-voice-panel glassmorphism">
+        <div id="gwen-header-toggle" class="gwen-header">
+            <div class="gwen-avatar-wrapper">
+                <div class="gwen-avatar-pulse"></div>
+                <i class="fa-solid fa-headset"></i>
+            </div>
+            <div class="gwen-text-area">
+                <span class="gwen-brand">Gwen AI</span>
+                <span id="gwen-voice-status" class="gwen-voice-status">Standby (დააწკაპუნეთ სალაპარაკოდ)</span>
+            </div>
+            <button class="gwen-toggle-btn" aria-label="Toggle Gwen Assistant Panel">
+                <i class="fa-solid fa-chevron-up"></i>
             </button>
         </div>
-        <div class="piwis-text-area">
-            <span class="piwis-brand">PIWIS AI</span>
-            <span id="piwis-voice-status" class="piwis-voice-status">Standby (დააწკაპუნეთ სალაპარაკოდ)</span>
+        <div id="gwen-chat-window" class="gwen-chat-window hidden">
+            <div id="gwen-chat-history" class="gwen-chat-history">
+                <div class="chat-message gwen">
+                    <span class="chat-sender">Gwen AI</span>
+                    <p class="chat-text">გამარჯობა! მე ვარ <strong>Gwen AI</strong>, თქვენი პერსონალური ასისტენტი. რით შემიძლია დაგეხმაროთ დღეს?</p>
+                </div>
+            </div>
+            <div class="gwen-chat-input-row">
+                <button id="gwen-mic-btn" class="gwen-mic-btn-chat" aria-label="ხმოვანი ბრძანება" title="ხმოვანი ბრძანება">
+                    <i class="fa-solid fa-microphone"></i>
+                    <span class="gwen-mic-wave"></span>
+                </button>
+                <input type="text" id="gwen-chat-input" placeholder="ჰკითხეთ გვენს..." autocomplete="off">
+                <button id="gwen-send-btn" class="gwen-send-btn" aria-label="გაგზავნა" title="გაგზავნა">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
         </div>
     </div>
 
