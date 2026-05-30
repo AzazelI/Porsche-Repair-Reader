@@ -60,15 +60,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     apiUrlInput.value = savedApiUrl;
 
-    // Driving Mode Selector (Normal / Sport / Track Themes)
+    // Driving Mode Selector (Normal / Sport / Track / Launch Themes)
     const modeButtons = document.querySelectorAll(".btn-mode");
     modeButtons.forEach(btn => {
         btn.addEventListener("click", () => {
+            const mode = btn.getAttribute("data-mode");
+            
+            // Launch control sequence handles its own activation, overlay, and theme transitions
+            if (mode === "launch") {
+                triggerLaunchControlSequence();
+                return;
+            }
+            
             modeButtons.forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
             
-            const mode = btn.getAttribute("data-mode");
-            document.body.classList.remove("theme-sport", "theme-track");
+            document.body.classList.remove("theme-sport", "theme-track", "theme-launch");
             
             if (mode === "sport") {
                 document.body.classList.add("theme-sport");
@@ -202,23 +209,39 @@ document.addEventListener("DOMContentLoaded", () => {
     // BACKEND FILE UPLOAD & SPEEDOMETER ENGINE
     // ==========================================
 
-    function setSpeedometer(percent) {
-        // SVG circumference is ~502. 
-        // 0% -> dashoffset = 502
-        // 100% -> dashoffset = 0 (full meter)
-        const circumference = 502;
-        const offset = circumference - (percent / 100) * circumference;
-        speedoProgress.style.strokeDashoffset = offset;
+    function setTachometer(rpmValue) {
+        // rpmValue is between 0 and 9.0 (0 to 9000 RPM)
+        // Map 0 -> -120deg, 9 -> 120deg
+        const minAngle = -120;
+        const maxAngle = 120;
+        const angle = minAngle + (rpmValue / 9) * (maxAngle - minAngle);
         
-        // Rotate needle (0% -> 0deg, 100% -> 360deg)
-        if (speedoNeedle) {
-            const degrees = (percent / 100) * 360;
-            speedoNeedle.style.transform = `rotate(${degrees}deg)`;
+        const needleGroup = document.getElementById("tacho-needle-group");
+        if (needleGroup) {
+            needleGroup.style.transform = `rotate(${angle}deg)`;
         }
         
-        // Update reading value (e.g. speed scale 0 to 300)
-        const speedValue = Math.round((percent / 100) * 300);
-        speedoValue.textContent = speedValue;
+        const valueElement = document.getElementById("tacho-value");
+        if (valueElement) {
+            valueElement.textContent = rpmValue.toFixed(1);
+        }
+        
+        // Shift light & screen rumble at redline (above 8.5 x1000 RPM)
+        const shiftLight = document.getElementById("tacho-shift-light");
+        const loadingContainer = document.getElementById("loading-section");
+        
+        if (rpmValue >= 8.5) {
+            if (shiftLight) shiftLight.classList.add("flash-active");
+            if (loadingContainer) loadingContainer.classList.add("rumble-active");
+        } else {
+            if (shiftLight) shiftLight.classList.remove("flash-active");
+            if (loadingContainer) loadingContainer.classList.remove("rumble-active");
+        }
+    }
+
+    function setSpeedometer(percent) {
+        // Backward compatibility: map 0-100% progress directly to 0-9.0 RPM
+        setTachometer((percent / 100) * 9.0);
     }
 
     function handleFileUpload(file) {
@@ -231,17 +254,50 @@ document.addEventListener("DOMContentLoaded", () => {
         landingContainer.classList.add("hidden");
         loadingSection.classList.remove("hidden");
         
-        // Start speedometer simulation
-        setSpeedometer(0);
-        loadingStatusText.textContent = "ტექსტის პარსინგი PDF-დან...";
+        // Start Tachometer rev and limit simulation
+        let currentRpm = 0.0;
+        let state = "revving"; // "revving", "bouncing", "settling", "climbing", "finishing"
+        let bounceCount = 0;
+        const tachoStartTime = Date.now();
         
-        let progress = 0;
         const progressInterval = setInterval(() => {
-            if (progress < 45) {
-                progress += Math.floor(Math.random() * 5) + 1;
-                setSpeedometer(progress);
+            const elapsed = Date.now() - tachoStartTime;
+            
+            if (state === "revving") {
+                // Quick rev up to 9.0 RPM in 350ms
+                currentRpm += 0.8;
+                if (currentRpm >= 9.0) {
+                    currentRpm = 9.0;
+                    state = "bouncing";
+                }
+            } else if (state === "bouncing") {
+                // Bounce limiter
+                currentRpm = currentRpm === 9.0 ? 8.6 : 9.0;
+                bounceCount++;
+                if (bounceCount > 10) {
+                    state = "settling";
+                }
+            } else if (state === "settling") {
+                // Settle down to 3.0 RPM
+                currentRpm -= 0.8;
+                if (currentRpm <= 3.0) {
+                    currentRpm = 3.0;
+                    state = "climbing";
+                }
+            } else if (state === "climbing") {
+                // Slowly climb towards 7.5 RPM during analysis (max 60 seconds)
+                const climbFactor = Math.min(1, elapsed / 60000);
+                currentRpm = 3.0 + climbFactor * 4.5;
+            } else if (state === "finishing") {
+                // Sweep up to max RPM on successful response
+                currentRpm += 0.8;
+                if (currentRpm >= 9.0) {
+                    currentRpm = 9.0;
+                }
             }
-        }, 300);
+            
+            setTachometer(currentRpm);
+        }, 30);
 
         // Start Sport Chrono Millisecond Timer
         const chronoTimeElement = document.getElementById("chrono-time");
@@ -281,9 +337,8 @@ document.addEventListener("DOMContentLoaded", () => {
             body: formData
         })
         .then(response => {
-            // Speed up loader to 75% on upload receive
-            progress = 75;
-            setSpeedometer(75);
+            // Update state to finishing for final redline sweep
+            state = "finishing";
             loadingStatusText.textContent = "ხელოვნური ინტელექტი აანალიზებს და თარგმნის...";
             
             if (!response.ok) {
@@ -292,13 +347,20 @@ document.addEventListener("DOMContentLoaded", () => {
             return response.json();
         })
         .then(data => {
-            // Success: fill dial to 100%
-            setSpeedometer(100);
+            // Success: fill dial to max
+            setTachometer(9.0);
             loadingStatusText.textContent = "ანალიზი წარმატებით დასრულდა!";
             
             setTimeout(() => {
                 clearInterval(progressInterval);
                 clearInterval(chronoInterval);
+                
+                // Clear any leftover rumble or flash styles
+                const loadingContainer = document.getElementById("loading-section");
+                if (loadingContainer) loadingContainer.classList.remove("rumble-active");
+                const shiftLight = document.getElementById("tacho-shift-light");
+                if (shiftLight) shiftLight.classList.remove("flash-active");
+                
                 renderDashboard(data);
             }, 800);
         })
@@ -829,17 +891,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 landingContainer.classList.add("hidden");
                 loadingSection.classList.remove("hidden");
                 
-                // Start speedometer simulation
-                setSpeedometer(0);
                 loadingStatusText.textContent = "დემო მონაცემების მყისიერი ჩატვირთვა (0-Latency RAG)...";
                 
-                let progress = 0;
+                // Tachometer physics simulation variables
+                let currentRpm = 0.0;
+                let state = "revving"; // "revving", "bouncing", "finishing"
+                let bounceCount = 0;
+                const tachoStartTime = Date.now();
+                
                 const progressInterval = setInterval(() => {
-                    if (progress < 100) {
-                        progress += 10;
-                        setSpeedometer(progress);
+                    const elapsed = Date.now() - tachoStartTime;
+                    
+                    if (state === "revving") {
+                        // Quick linear climb to 9.0 RPM in 300ms
+                        currentRpm = (elapsed / 300) * 9.0;
+                        if (currentRpm >= 9.0) {
+                            currentRpm = 9.0;
+                            state = "bouncing";
+                        }
+                    } else if (state === "bouncing") {
+                        // Rev-limiter bounce (tat-tat-tat-tat!)
+                        currentRpm = currentRpm === 9.0 ? 8.6 : 9.0;
+                        bounceCount++;
+                        if (bounceCount > 8) {
+                            state = "finishing";
+                        }
+                    } else if (state === "finishing") {
+                        currentRpm = 9.0;
                     }
-                }, 80);
+                    
+                    setTachometer(currentRpm);
+                }, 30);
 
                 // Start Sport Chrono Millisecond Timer
                 const chronoTimeElement = document.getElementById("chrono-time");
@@ -865,11 +947,430 @@ document.addEventListener("DOMContentLoaded", () => {
                 setTimeout(() => {
                     clearInterval(progressInterval);
                     clearInterval(chronoInterval);
+                    
+                    // Reset tacho and loading state styles
+                    setTachometer(0.0);
+                    const loadingContainer = document.getElementById("loading-section");
+                    if (loadingContainer) loadingContainer.classList.remove("rumble-active");
+                    const shiftLight = document.getElementById("tacho-shift-light");
+                    if (shiftLight) shiftLight.classList.remove("flash-active");
+                    
                     renderDashboard(data);
-                }, 900);
+                }, 1050); // Total 1.05s to allow for full rev limiter rumble effect
             }
         });
     });
+
+    // ==========================================
+    // NATIVE WEB AUDIO ENGINE SOUND SYNTHESIZER
+    // ==========================================
+    let audioCtx = null;
+    let engineOsc = null;
+    let engineGain = null;
+    let filterNode = null;
+    
+    function startEngineSound() {
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Main flat-six cylinder tone
+            engineOsc = audioCtx.createOscillator();
+            engineOsc.type = 'sawtooth';
+            engineOsc.frequency.setValueAtTime(75, audioCtx.currentTime); // Idle Hz
+            
+            // Sub oscillator for deep rumble
+            const subOsc = audioCtx.createOscillator();
+            subOsc.type = 'sawtooth';
+            subOsc.frequency.setValueAtTime(37.5, audioCtx.currentTime);
+
+            // Biquad filter to give it realistic flat-six throttle sound
+            filterNode = audioCtx.createBiquadFilter();
+            filterNode.type = 'lowpass';
+            filterNode.frequency.setValueAtTime(240, audioCtx.currentTime);
+            
+            // Volume Gain Node
+            engineGain = audioCtx.createGain();
+            engineGain.gain.setValueAtTime(0.0, audioCtx.currentTime);
+            engineGain.gain.linearRampToValueAtTime(0.18, audioCtx.currentTime + 0.1);
+            
+            // Connect nodes
+            engineOsc.connect(filterNode);
+            subOsc.connect(filterNode);
+            filterNode.connect(engineGain);
+            engineGain.connect(audioCtx.destination);
+            
+            engineOsc.start();
+            subOsc.start();
+            
+            engineOsc._subOsc = subOsc;
+        } catch (e) {
+            console.warn("Web Audio API not allowed or supported yet:", e);
+        }
+    }
+    
+    function updateEngineSound(rpmValue) {
+        if (!audioCtx || !engineOsc) return;
+        
+        // Map 0.0 - 9.0 RPM -> 55Hz - 360Hz
+        const freq = 55 + (rpmValue * 34);
+        engineOsc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        if (engineOsc._subOsc) {
+            engineOsc._subOsc.frequency.setValueAtTime(freq / 2, audioCtx.currentTime);
+        }
+        
+        // Open/Close filter intake based on RPM
+        const filterFreq = 160 + (rpmValue * 85);
+        filterNode.frequency.setValueAtTime(filterFreq, audioCtx.currentTime);
+    }
+    
+    function stopEngineSound() {
+        if (engineGain && audioCtx) {
+            engineGain.gain.linearRampToValueAtTime(0.0, audioCtx.currentTime + 0.15);
+            setTimeout(() => {
+                try {
+                    if (engineOsc) {
+                        engineOsc.stop();
+                        if (engineOsc._subOsc) engineOsc._subOsc.stop();
+                    }
+                } catch (e) {}
+                audioCtx = null;
+                engineOsc = null;
+                engineGain = null;
+            }, 200);
+        }
+    }
+    
+    function playBeep(pitch, duration) {
+        try {
+            const ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(pitch, ctx.currentTime);
+            gain.gain.setValueAtTime(0.12, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+            osc.start();
+            osc.stop(ctx.currentTime + duration);
+        } catch (e) {}
+    }
+
+    // ==========================================
+    // LAUNCH CONTROL SEQUENCE CONTROLLER
+    // ==========================================
+    function triggerLaunchControlSequence() {
+        const overlay = document.getElementById("launch-overlay");
+        const statusText = document.getElementById("launch-status");
+        const timerText = document.getElementById("launch-timer");
+        const lights = document.querySelectorAll(".light");
+        
+        if (!overlay) return;
+        
+        // Reset state
+        lights.forEach(l => l.classList.remove("active"));
+        overlay.classList.remove("hidden");
+        document.body.classList.remove("theme-launch", "theme-sport", "theme-track");
+        document.body.classList.remove("body-rumble");
+        
+        statusText.textContent = "DEPRESS BRAKE & ACCELERATOR TO 100%";
+        statusText.classList.remove("ready");
+        timerText.textContent = "0.00s";
+        
+        // Turn on Engine Audio flat-six flat tone at low idle
+        startEngineSound();
+        updateEngineSound(1.2);
+        
+        // Drag tree sequence
+        // Stage 1: Pre-stage (Yellow) at 400ms
+        setTimeout(() => {
+            const pl = document.querySelector(".prestage-left");
+            const pr = document.querySelector(".prestage-right");
+            if (pl) pl.classList.add("active");
+            if (pr) pr.classList.add("active");
+            playBeep(880, 0.08);
+            updateEngineSound(2.2);
+        }, 400);
+        
+        // Stage 2: Stage (Yellow) at 800ms
+        setTimeout(() => {
+            const sl = document.querySelector(".stage-left");
+            const sr = document.querySelector(".stage-right");
+            if (sl) sl.classList.add("active");
+            if (sr) sr.classList.add("active");
+            playBeep(880, 0.08);
+            updateEngineSound(3.8);
+        }, 800);
+        
+        // Stage 3: Countdown Red 1 at 1200ms
+        setTimeout(() => {
+            const c1 = document.querySelector(".count-1");
+            if (c1) c1.classList.add("active");
+            playBeep(520, 0.12);
+            updateEngineSound(5.2);
+        }, 1200);
+        
+        // Stage 4: Countdown Red 2 at 1600ms
+        setTimeout(() => {
+            const c2 = document.querySelector(".count-2");
+            if (c2) c2.classList.add("active");
+            playBeep(520, 0.12);
+            updateEngineSound(6.8);
+        }, 1600);
+        
+        // Stage 5: Countdown Red 3 + Launch Control Engaged at 2000ms
+        let bounceInterval = null;
+        setTimeout(() => {
+            const c3 = document.querySelector(".count-3");
+            if (c3) c3.classList.add("active");
+            statusText.textContent = "LAUNCH CONTROL ACTIVE!";
+            statusText.classList.add("ready");
+            playBeep(520, 0.12);
+            
+            // Limiter bounce vibration and pops
+            document.body.classList.add("body-rumble");
+            let bounceToggle = false;
+            bounceInterval = setInterval(() => {
+                bounceToggle = !bounceToggle;
+                const rpm = bounceToggle ? 9.0 : 8.6;
+                updateEngineSound(rpm);
+                if (bounceToggle) playBeep(70, 0.04);
+            }, 60);
+        }, 2000);
+        
+        // Stage 6: GREEN LIGHT - GO! at 2800ms
+        setTimeout(() => {
+            if (bounceInterval) clearInterval(bounceInterval);
+            document.body.classList.remove("body-rumble");
+            
+            // Turn off reds, light greens
+            const reds = document.querySelectorAll(".light.red");
+            reds.forEach(r => r.classList.remove("active"));
+            
+            const gl = document.querySelector(".launch-left");
+            const gr = document.querySelector(".launch-right");
+            if (gl) gl.classList.add("active");
+            if (gr) gr.classList.add("active");
+            
+            playBeep(1150, 0.35);
+            updateEngineSound(9.0);
+            statusText.textContent = "LAUNCH!!!";
+            
+            let start = Date.now();
+            const launchTimerInterval = setInterval(() => {
+                const elapsed = (Date.now() - start) / 1000;
+                timerText.textContent = elapsed.toFixed(2) + "s";
+                if (elapsed >= 1.2) {
+                    clearInterval(launchTimerInterval);
+                }
+            }, 10);
+            
+            // Fade out overlay and switch to Theme Launch
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    overlay.classList.add("hidden");
+                    overlay.style.opacity = '1';
+                    
+                    // Switch active button to LC
+                    modeButtons.forEach(b => b.classList.remove("active"));
+                    const lcButton = document.querySelector(".btn-mode-lc");
+                    if (lcButton) lcButton.classList.add("active");
+                    
+                    document.body.classList.add("theme-launch");
+                    stopEngineSound();
+                }, 500);
+            }, 1200);
+            
+        }, 2800);
+    }
+
+    // ==========================================
+    // PIWIS AI VOICE ASSISTANT CLIENT ENGINE
+    // ==========================================
+    const piwisMicBtn = document.getElementById("piwis-mic-btn");
+    const piwisPanel = document.getElementById("piwis-voice-panel");
+    const piwisStatus = document.getElementById("piwis-voice-status");
+    
+    let voiceRecognition = null;
+    let isListening = false;
+    
+    function speakText(text) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
+            const geVoice = voices.find(v => v.lang.includes("ka") || v.lang.includes("GE"));
+            
+            if (geVoice) {
+                utterance.voice = geVoice;
+                utterance.lang = "ka-GE";
+            } else {
+                utterance.lang = "ka-GE";
+            }
+            
+            utterance.rate = 1.05;
+            utterance.pitch = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+    }
+    
+    function initializePIWISVoice() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            if (piwisStatus) piwisStatus.textContent = "ხმის მართვა არ არის მხარდაჭერილი";
+            return;
+        }
+        
+        voiceRecognition = new SpeechRecognition();
+        voiceRecognition.continuous = true;
+        voiceRecognition.interimResults = false;
+        voiceRecognition.lang = "ka-GE"; // Georgian locale
+        
+        voiceRecognition.onstart = () => {
+            isListening = true;
+            if (piwisPanel) piwisPanel.classList.add("listening");
+            if (piwisStatus) piwisStatus.textContent = "გისმენთ... (PIWIS Active)";
+        };
+        
+        voiceRecognition.onend = () => {
+            isListening = false;
+            if (piwisPanel) piwisPanel.classList.remove("listening");
+            if (piwisStatus) piwisStatus.textContent = "Standby (დააწკაპუნეთ სალაპარაკოდ)";
+        };
+        
+        voiceRecognition.onresult = (event) => {
+            const resultIndex = event.resultIndex;
+            const transcript = event.results[resultIndex][0].transcript.trim().toLowerCase();
+            
+            if (piwisStatus) piwisStatus.textContent = `გავიგე: "${transcript}"`;
+            
+            processVoiceCommand(transcript);
+        };
+        
+        voiceRecognition.onerror = (e) => {
+            console.warn("PIWIS recognition error:", e);
+            if (piwisStatus) piwisStatus.textContent = "ხმა ვერ იქნა ამოცნობილი";
+        };
+    }
+    
+    function processVoiceCommand(command) {
+        const steps = document.querySelectorAll(".step-card");
+        
+        // Command 1: "შემდეგი" (Next Step)
+        if (command.includes("შემდეგი") || command.includes("შემდეგ") || command.includes("next")) {
+            const activeStep = document.querySelector(".step-card:not(.completed)");
+            if (activeStep) {
+                const checkBtn = activeStep.querySelector(".step-check-btn");
+                if (checkBtn) {
+                    checkBtn.click();
+                    speakText("ნაბიჯი შესრულებულია");
+                    
+                    setTimeout(() => {
+                        const nextStep = document.querySelector(".step-card:not(.completed)");
+                        if (nextStep) {
+                            nextStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            const text = nextStep.querySelector(".step-desc-ka").textContent;
+                            speakText("შემდეგი ნაბიჯი: " + text);
+                        } else {
+                            speakText("ყველა ნაბიჯი წარმატებით შესრულებულია! სამუშაო ბარათი მზადაა.");
+                        }
+                    }, 500);
+                }
+            } else {
+                speakText("ყველა ნაბიჯი დასრულებულია");
+            }
+        }
+        
+        // Command 2: "წინა" (Previous Step)
+        else if (command.includes("წინა") || command.includes("უკან") || command.includes("previous")) {
+            const completedSteps = document.querySelectorAll(".step-card.completed");
+            if (completedSteps.length > 0) {
+                const lastCompleted = completedSteps[completedSteps.length - 1];
+                const checkBtn = lastCompleted.querySelector(".step-check-btn");
+                if (checkBtn) {
+                    checkBtn.click();
+                    lastCompleted.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const text = lastCompleted.querySelector(".step-desc-ka").textContent;
+                    speakText("დავბრუნდით წინა ნაბიჯზე: " + text);
+                }
+            } else {
+                speakText("პირველ ნაბიჯზე ვართ");
+            }
+        }
+        
+        // Command 3: "წაიკითხე" (Read Current Step)
+        else if (command.includes("წაიკითხე") || command.includes("read")) {
+            const activeStep = document.querySelector(".step-card:not(.completed)") || document.querySelector(".step-card");
+            if (activeStep) {
+                const stepNum = activeStep.querySelector(".step-number").textContent;
+                const text = activeStep.querySelector(".step-desc-ka").textContent;
+                speakText(stepNum + ". " + text);
+            } else {
+                speakText("ინსტრუქცია არ არის ჩატვირთული");
+            }
+        }
+        
+        // Command 4: Go to specific step number
+        else if (command.includes("ნაბიჯი") || command.includes("step")) {
+            const match = command.match(/\d+/);
+            if (match) {
+                const targetNum = parseInt(match[0], 10);
+                const targetStep = Array.from(steps).find(step => {
+                    const numText = step.querySelector(".step-number").textContent;
+                    return numText.includes(targetNum);
+                });
+                
+                if (targetStep) {
+                    targetStep.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const text = targetStep.querySelector(".step-desc-ka").textContent;
+                    speakText("ნაბიჯი " + targetNum + ": " + text);
+                } else {
+                    speakText("ნაბიჯი " + targetNum + " ვერ მოიძებნა");
+                }
+            }
+        }
+        
+        // Command 5: Read Torque Specs
+        else if (command.includes("ძალა") || command.includes("დაჭერა") || command.includes("torque")) {
+            const details = document.querySelectorAll("#details-container li strong");
+            if (details.length > 0) {
+                let specsText = "დაჭერის ძალებია: ";
+                details.forEach(detail => {
+                    specsText += detail.textContent + ". ";
+                });
+                speakText(specsText);
+            } else {
+                speakText("დაჭერის ძალები მითითებული არ არის");
+            }
+        }
+        
+        // Command 6: Greeting/Test
+        else if (command.includes("პივის") || command.includes("ჰელოუ") || command.includes("hello")) {
+            speakText("გისმენთ! მე ვარ PIWIS AI, თქვენი ხმოვანი ასისტენტი. შემიძლია წავიკითხო სარემონტო ნაბიჯები და ძალები.");
+        }
+    }
+    
+    if (piwisMicBtn) {
+        piwisMicBtn.addEventListener("click", () => {
+            if (!voiceRecognition) {
+                initializePIWISVoice();
+            }
+            
+            if (voiceRecognition) {
+                if (isListening) {
+                    voiceRecognition.stop();
+                } else {
+                    voiceRecognition.start();
+                    playBeep(987, 0.08);
+                    setTimeout(() => playBeep(1318, 0.15), 80);
+                }
+            }
+        });
+    }
+    
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.getVoices();
+    }
 });
 
 // Global function to toggle English version of steps (needed for inline onclick)

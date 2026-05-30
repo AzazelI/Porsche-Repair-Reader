@@ -52,6 +52,7 @@
                     <button class="btn-mode active" data-mode="normal" aria-label="Normal Mode: Carbon Dark" title="Normal - Carbon Dark">N</button>
                     <button class="btn-mode" data-mode="sport" aria-label="Sport Mode: Guards Red" title="Sport - Guards Red">S</button>
                     <button class="btn-mode" data-mode="track" aria-label="Track Mode: Chrono Gold" title="Track / GT - Chrono Gold">GT</button>
+                    <button class="btn-mode btn-mode-lc" data-mode="launch" aria-label="Launch Control Mode" title="Launch Control - Extreme Track Mode">LC</button>
                 </div>
             </div>
             <button id="settings-toggle" class="btn-icon hidden" title="პარამეტრები (API Key)">
@@ -217,17 +218,48 @@
             </section>
         </div>
 
-        <!-- SPEEDOMETER LOADING SECTION (Hidden by default) -->
+        <!-- PORSCHE TACHOMETER LOADING SECTION (Hidden by default) -->
         <section id="loading-section" class="loading-section hidden">
-            <div class="speedometer-container">
-                <svg class="speedometer" viewBox="0 0 200 200">
-                    <circle class="speedo-bg" cx="100" cy="100" r="80"></circle>
-                    <circle id="speedo-progress" class="speedo-progress" cx="100" cy="100" r="80"></circle>
-                    <line id="speedo-needle" class="speedo-needle" x1="100" y1="100" x2="100" y2="30" />
+            <div class="tachometer-container">
+                <!-- Shift Light Badge -->
+                <div id="tacho-shift-light" class="tacho-shift-light">SHIFT</div>
+                <svg class="tachometer" viewBox="0 0 200 200">
+                    <defs>
+                        <!-- Glow filter for premium neon needle look -->
+                        <filter id="glow-red" x="-20%" y="-20%" width="140%" height="140%">
+                            <feGaussianBlur stdDeviation="2.5" result="blur" />
+                            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                        </filter>
+                    </defs>
+                    <!-- Background Dial -->
+                    <circle class="tacho-bg" cx="100" cy="100" r="80"></circle>
+                    <!-- Redline section (7.5 to 9.0 x1000 RPM) -->
+                    <path class="tacho-redline" d="M 156.5 43.5 A 80 80 0 0 1 180 100" fill="none" stroke="#d5001c" stroke-width="5" filter="url(#glow-red)" opacity="0.65"></path>
+                    
+                    <!-- Tick Marks (0 to 9 x1000 RPM) -->
+                    <g class="tacho-ticks" stroke="var(--color-text-grey)" stroke-width="1.8" stroke-linecap="round">
+                        <!-- Scale ticks generated at specific degree rotations -->
+                        <line x1="100" y1="20" x2="100" y2="28" transform="rotate(-120 100 100)" />
+                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(-93.3 100 100)" />
+                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(-66.7 100 100)" />
+                        <line x1="100" y1="20" x2="100" y2="28" transform="rotate(-40 100 100)" />
+                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(-13.3 100 100)" />
+                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(13.3 100 100)" />
+                        <line x1="100" y1="20" x2="100" y2="28" transform="rotate(40 100 100)" />
+                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(66.7 100 100)" />
+                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(93.3 100 100)" stroke="#d5001c" />
+                        <line x1="100" y1="20" x2="100" y2="28" transform="rotate(120 100 100)" stroke="#d5001c" />
+                    </g>
+                    
+                    <!-- Needle Group -->
+                    <g id="tacho-needle-group" class="tacho-needle-group" style="transform: rotate(-120deg);">
+                        <line class="tacho-needle" x1="100" y1="100" x2="100" y2="22" stroke="#d5001c" stroke-width="2.5" filter="url(#glow-red)" />
+                        <circle cx="100" cy="100" r="9" fill="#141417" stroke="#28282e" stroke-width="1.8"></circle>
+                    </g>
                 </svg>
-                <div class="speedo-text">
-                    <span id="speedo-value" class="speedo-value">0</span>
-                    <span class="speedo-unit">KM/H</span>
+                <div class="tacho-text">
+                    <span id="tacho-value" class="tacho-value">0.0</span>
+                    <span class="tacho-unit">RPM x1000</span>
                 </div>
             </div>
             
@@ -355,6 +387,51 @@
     <footer class="porsche-footer">
         <p>&copy; 2026 Porsche Aftersales Intelligent Reader. All rights reserved.</p>
     </footer>
+
+    <!-- Launch Control Fullscreen Overlay -->
+    <div id="launch-overlay" class="launch-overlay hidden">
+        <div class="launch-tree-container glassmorphism">
+            <h2 class="launch-title">LAUNCH CONTROL ACTIVATED</h2>
+            <div class="christmas-tree">
+                <!-- Pre-stage & Stage Lights (Yellow) -->
+                <div class="tree-row row-prestage">
+                    <div class="light yellow prestage-left"></div>
+                    <div class="light yellow prestage-right"></div>
+                </div>
+                <div class="tree-row row-stage">
+                    <div class="light yellow stage-left"></div>
+                    <div class="light yellow stage-right"></div>
+                </div>
+                <!-- Countdown Red Lights -->
+                <div class="tree-row row-countdown">
+                    <div class="light red count-1"></div>
+                    <div class="light red count-2"></div>
+                    <div class="light red count-3"></div>
+                </div>
+                <!-- Launch Green Lights -->
+                <div class="tree-row row-launch">
+                    <div class="light green launch-left"></div>
+                    <div class="light green launch-right"></div>
+                </div>
+            </div>
+            <div id="launch-status" class="launch-status">DEPRESS BRAKE & ACCELERATOR TO 100%</div>
+            <div class="launch-countdown-timer" id="launch-timer">0.00s</div>
+        </div>
+    </div>
+
+    <!-- PIWIS AI Voice Assistant Panel -->
+    <div id="piwis-voice-panel" class="piwis-voice-panel glassmorphism">
+        <div class="piwis-mic-wrapper">
+            <button id="piwis-mic-btn" class="piwis-mic-btn" aria-label="Toggle PIWIS Voice Assistant" title="PIWIS Voice Assistant (ხმოვანი მართვა)">
+                <i class="fa-solid fa-microphone"></i>
+                <span class="mic-wave"></span>
+            </button>
+        </div>
+        <div class="piwis-text-area">
+            <span class="piwis-brand">PIWIS AI</span>
+            <span id="piwis-voice-status" class="piwis-voice-status">Standby (დააწკაპუნეთ სალაპარაკოდ)</span>
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>

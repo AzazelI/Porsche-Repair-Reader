@@ -1961,69 +1961,667 @@ body.theme-track .section-title h2 i {
 }
 
 /* ==========================================
-   WORKSHOP PRINT SHEET (PRINTABLE JOB CARD)
+   PORSCHE TACHOMETER STYLES
+   ========================================== */
+.tachometer-container {
+    position: relative;
+    width: 220px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tachometer {
+    width: 100%;
+    height: 100%;
+}
+
+.tacho-bg {
+    fill: none;
+    stroke: #16161b;
+    stroke-width: 8;
+}
+
+.tacho-needle-group {
+    transform-origin: 100px 100px;
+    transition: transform 0.06s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.tacho-needle {
+    stroke-linecap: round;
+}
+
+.tacho-text {
+    position: absolute;
+    top: 60%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.tacho-value {
+    font-size: 34px;
+    font-weight: 800;
+    color: var(--color-text-white);
+    font-family: monospace;
+}
+
+.tacho-unit {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--color-text-grey);
+    font-weight: 700;
+    margin-top: -3px;
+}
+
+/* Shift Light */
+.tacho-shift-light {
+    position: absolute;
+    top: 15px;
+    right: 35px;
+    background-color: #333;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+    opacity: 0.5;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.tacho-shift-light.flash-active {
+    background-color: var(--color-guards-red);
+    box-shadow: 0 0 15px var(--color-guards-red);
+    opacity: 1;
+    animation: shift-flash 0.1s infinite;
+}
+
+@keyframes shift-flash {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+
+/* Engine Rumble (Screen Shake) */
+.loading-section.rumble-active {
+    animation: engine-rumble 0.08s infinite;
+}
+
+@keyframes engine-rumble {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -1px) rotate(-0.3deg); }
+    20% { transform: translate(-1.5px, 0px) rotate(0.3deg); }
+    30% { transform: translate(1px, 1.5px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(0.3deg); }
+    50% { transform: translate(-1px, 1.5px) rotate(-0.3deg); }
+    60% { transform: translate(-1.5px, 1px) rotate(0deg); }
+    70% { transform: translate(1.5px, 1px) rotate(-0.3deg); }
+    80% { transform: translate(-1px, -1px) rotate(0.3deg); }
+    90% { transform: translate(1.5px, 1.5px) rotate(0deg); }
+    100% { transform: translate(1px, -1.5px) rotate(-0.3deg); }
+}
+
+/* ==========================================
+   LAUNCH CONTROL FULLSCREEN OVERLAY & CHRISTMAS TREE
+   ========================================== */
+.launch-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(6, 6, 8, 0.96);
+    backdrop-filter: blur(15px);
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease;
+    opacity: 1;
+}
+
+.launch-overlay.hidden {
+    display: none !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.launch-tree-container {
+    width: 90%;
+    max-width: 450px;
+    padding: 40px 30px;
+    border-radius: 20px;
+    border: 1px solid rgba(213, 0, 28, 0.3);
+    box-shadow: 0 0 35px rgba(213, 0, 28, 0.15);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    background: rgba(18, 18, 22, 0.85);
+}
+
+.launch-title {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: var(--color-guards-red);
+    text-transform: uppercase;
+    text-shadow: 0 0 10px rgba(213, 0, 28, 0.5);
+    margin-bottom: 5px;
+}
+
+.christmas-tree {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+}
+
+.tree-row {
+    display: flex;
+    justify-content: center;
+    gap: 25px;
+    width: 100%;
+}
+
+.tree-row.row-countdown {
+    gap: 15px;
+}
+
+.light {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.15s ease-in-out;
+}
+
+/* Yellow pre-stage/stage lights */
+.light.yellow.active {
+    background-color: #ffd000;
+    border-color: #ffe600;
+    box-shadow: 0 0 25px #ffd000, inset 0 0 8px #fff;
+}
+
+/* Red countdown lights */
+.light.red.active {
+    background-color: var(--color-guards-red);
+    border-color: #ff3b30;
+    box-shadow: 0 0 25px var(--color-guards-red), inset 0 0 8px #fff;
+}
+
+/* Green launch lights */
+.light.green.active {
+    background-color: #00e676;
+    border-color: #69f0ae;
+    box-shadow: 0 0 35px #00e676, inset 0 0 8px #fff;
+}
+
+.launch-status {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--color-text-white);
+    min-height: 20px;
+    transition: color 0.3s ease;
+}
+
+.launch-status.ready {
+    color: #00e676;
+    text-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
+}
+
+.launch-countdown-timer {
+    font-size: 32px;
+    font-weight: 800;
+    font-family: monospace;
+    color: var(--color-text-white);
+    letter-spacing: 1px;
+}
+
+/* ==========================================
+   LAUNCH CONTROL ACTIVE THEME
+   ========================================== */
+body.porsche-theme.theme-launch {
+    background-image: radial-gradient(circle at top right, rgba(213, 0, 28, 0.12), transparent 45%),
+                      radial-gradient(circle at bottom left, rgba(0, 230, 118, 0.06), transparent 40%);
+    background-color: #040405;
+}
+
+body.porsche-theme.theme-launch .glassmorphism {
+    border-color: rgba(213, 0, 28, 0.3);
+    box-shadow: 0 0 20px rgba(213, 0, 28, 0.08), var(--box-shadow-premium);
+    background: rgba(10, 10, 12, 0.9);
+}
+
+body.porsche-theme.theme-launch .glassmorphism:hover {
+    border-color: rgba(213, 0, 28, 0.45);
+    box-shadow: 0 0 30px rgba(213, 0, 28, 0.15), var(--box-shadow-premium);
+}
+
+/* Hyper active laser scanner */
+body.porsche-theme.theme-launch .laser-scanner {
+    background: linear-gradient(to right, transparent, var(--color-guards-red), transparent);
+    animation-duration: 0.8s;
+}
+
+body.porsche-theme.theme-launch .title-ge i,
+body.porsche-theme.theme-launch .panel-header h2 i {
+    color: var(--color-guards-red);
+    text-shadow: 0 0 8px rgba(213, 0, 28, 0.6);
+}
+
+body.porsche-theme.theme-launch .step-node {
+    border-color: var(--color-guards-red);
+    box-shadow: 0 0 5px var(--color-guards-red);
+}
+
+body.porsche-theme.theme-launch .step-card:hover .step-node {
+    background-color: var(--color-guards-red);
+    box-shadow: 0 0 15px var(--color-guards-red);
+}
+
+body.porsche-theme.theme-launch .step-number {
+    background-color: rgba(213, 0, 28, 0.15);
+    color: var(--color-guards-red);
+    box-shadow: 0 0 5px rgba(213, 0, 28, 0.2);
+}
+
+body.porsche-theme.theme-launch .btn-mode-lc.active {
+    background-color: var(--color-guards-red);
+    color: var(--color-text-white);
+    border-color: #ff3b30;
+    box-shadow: 0 0 15px var(--color-guards-red);
+    animation: pulse-border 1s infinite alternate;
+}
+
+@keyframes pulse-border {
+    0% { box-shadow: 0 0 8px var(--color-guards-red); }
+    100% { box-shadow: 0 0 20px var(--color-guards-red); }
+}
+
+/* Engine shake for the entire body during Launch control revs */
+body.body-rumble {
+    animation: body-rumble-shake 0.05s infinite;
+}
+
+@keyframes body-rumble-shake {
+    0% { transform: translate(0.5px, 0.5px); }
+    50% { transform: translate(-0.5px, -0.5px); }
+    100% { transform: translate(0.5px, -0.5px); }
+}
+
+/* ==========================================
+   PIWIS AI VOICE ASSISTANT FLOATING WIDGET
+   ========================================== */
+.piwis-voice-panel {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    padding: 12px 20px;
+    border-radius: 40px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid rgba(0, 230, 118, 0.2);
+    box-shadow: 0 0 25px rgba(0, 230, 118, 0.08), var(--box-shadow-premium);
+    z-index: 9999;
+    background: rgba(12, 12, 14, 0.85);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.piwis-voice-panel:hover {
+    border-color: rgba(0, 230, 118, 0.4);
+    box-shadow: 0 0 35px rgba(0, 230, 118, 0.15), var(--box-shadow-premium);
+}
+
+.piwis-mic-wrapper {
+    position: relative;
+    width: 42px;
+    height: 42px;
+}
+
+.piwis-mic-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    background-color: rgba(0, 230, 118, 0.1);
+    color: #00e676;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 2;
+    position: relative;
+}
+
+.piwis-mic-btn:hover {
+    background-color: rgba(0, 230, 118, 0.2);
+    transform: scale(1.05);
+}
+
+/* Active listening microphone style */
+.piwis-voice-panel.listening {
+    border-color: rgba(0, 230, 118, 0.6);
+    box-shadow: 0 0 30px rgba(0, 230, 118, 0.25);
+}
+
+.piwis-voice-panel.listening .piwis-mic-btn {
+    background-color: #00e676;
+    color: #0c0c0e;
+    box-shadow: 0 0 15px #00e676;
+}
+
+.mic-wave {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 50%;
+    border: 2px solid #00e676;
+    opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+}
+
+.piwis-voice-panel.listening .mic-wave {
+    animation: mic-wave-pulse 1.5s infinite ease-out;
+}
+
+@keyframes mic-wave-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+
+.piwis-text-area {
+    display: flex;
+    flex-direction: column;
+    min-width: 150px;
+    max-width: 250px;
+}
+
+.piwis-brand {
+    font-size: 10px;
+    font-weight: 800;
+    color: #00e676;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.piwis-voice-status {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--color-text-white);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ==========================================
+   WORKSHOP PRINT SHEET (EXCLUSIVE MANUFAKTUR)
    ========================================== */
 @media print {
     body {
         background: #ffffff !important;
         color: #000000 !important;
+        font-family: 'Outfit', sans-serif !important;
     }
-    .porsche-navbar, .upload-section, .loading-section, .action-footer, .porsche-footer, #settings-toggle {
+    
+    .porsche-navbar, .upload-section, .loading-section, .action-footer, .porsche-footer, #settings-toggle, .piwis-voice-panel, .porsche-mode-selector, .chrono-widget, .telemetry-graph-wrapper {
         display: none !important;
     }
+    
     .cockpit-container {
         padding: 0 !important;
+        margin: 0 !important;
         max-width: 100% !important;
     }
+    
     .dashboard-section {
         display: block !important;
     }
-    /* Fix print layouts dropping elements due to flex/grid page wraps and overflow cutoffs */
+    
+    /* Full print layouts expansion */
     .dashboard-grid, .right-pane, .summary-cards, .table-container, .panel, .steps-container {
         display: block !important;
         overflow: visible !important;
         height: auto !important;
         max-height: none !important;
     }
+    
     .glassmorphism {
         background: #ffffff !important;
-        border: 1px solid #cccccc !important;
+        border: 1px solid #000000 !important;
         color: #000000 !important;
         box-shadow: none !important;
         backdrop-filter: none !important;
+        border-radius: 8px !important;
+        margin-bottom: 20px !important;
+        padding: 20px !important;
     }
-    .panel::after {
+    
+    /* Print Header decoration */
+    .instruction-header-title {
+        border-bottom: 3px double #000000 !important;
+        border-top: 1px solid #000000 !important;
+        padding: 15px 0 !important;
+        margin-bottom: 30px !important;
+        position: relative;
+    }
+    
+    .instruction-header-title::before {
+        content: "PORSCHE AFTERSALES SERVICE ORDER";
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 4px;
+        color: #000000;
+        text-align: center;
+        margin-bottom: 8px;
+    }
+    
+    .title-ge {
+        color: #000000 !important;
+        text-align: center;
+        justify-content: center;
+    }
+    
+    .title-ge h2 {
+        color: #000000 !important;
+        font-size: 20px !important;
+        font-weight: 800 !important;
+    }
+    
+    .title-ge i {
         display: none !important;
     }
-    .step-card {
-        border-left: 4px solid #d5001c !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-    .panel {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-        margin-bottom: 20px !important;
-    }
-    tr, li, .torque-widget, .tool-card {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-    .badge-renew {
-        background: #ffe6e6 !important;
-        color: #d5001c !important;
-        border: 1px solid #d5001c !important;
-    }
-    .badge-if-necessary {
-        background: #f2f2f2 !important;
+    
+    .title-en {
         color: #555555 !important;
-        border: 1px solid #cccccc !important;
+        margin-left: 0 !important;
+        text-align: center;
+        font-size: 12px !important;
     }
-    .torque-widget {
-        border: 1px solid #cccccc !important;
-        background: #fdfdfd !important;
+    
+    .panel-header {
+        border-bottom: 2px solid #000000 !important;
+        padding-bottom: 8px !important;
+        margin-bottom: 15px !important;
     }
-    .torque-value-text, .torque-label, .part-title-ka, .step-desc-ka, .step-number {
+    
+    .panel-header h2 {
         color: #000000 !important;
+        font-size: 15px !important;
+        font-weight: 700 !important;
+    }
+    
+    .panel-header h2 i {
+        display: none !important;
+    }
+    
+    /* Step Styling for Printable Cards */
+    .step-card {
+        border: 1px solid #cccccc !important;
+        border-left: 6px solid #000000 !important;
+        background: #ffffff !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        padding: 15px !important;
+        margin-bottom: 15px !important;
+        border-radius: 4px !important;
+    }
+    
+    .step-node {
+        display: none !important;
+    }
+    
+    .steps-container::before {
+        display: none !important;
+    }
+    
+    .step-number {
+        background: #000000 !important;
+        color: #ffffff !important;
+        border-radius: 2px !important;
+        padding: 2px 6px !important;
+    }
+    
+    .btn-toggle-en, .step-check-btn {
+        display: none !important;
+    }
+    
+    .step-desc-ka {
+        color: #000000 !important;
+        font-size: 14px !important;
+    }
+    
+    .step-desc-en {
+        color: #444444 !important;
+        font-size: 12px !important;
+        border-left: 2px solid #666666 !important;
+        display: block !important; /* Always show English on printout for safety */
+    }
+    
+    .step-warning {
+        background: #fdf2f2 !important;
+        border: 1px solid #d5001c !important;
+        border-left: 4px solid #d5001c !important;
+    }
+    
+    .warning-text-ka, .warning-text-en {
+        color: #d5001c !important;
+    }
+    
+    /* Parts Table Print */
+    .parts-table th {
+        background: #f2f2f2 !important;
+        color: #000000 !important;
+        border-bottom: 2px solid #000000 !important;
+        font-size: 11px !important;
+    }
+    
+    .parts-table td {
+        border-bottom: 1px solid #cccccc !important;
+        color: #000000 !important;
+        padding: 10px 12px !important;
+    }
+    
+    .part-no {
+        background: none !important;
+        border: 1px dashed #666666 !important;
+        color: #000000 !important;
+        font-size: 12px !important;
+    }
+    
+    .part-title-ka {
+        color: #000000 !important;
+    }
+    
+    .badge {
+        border: 1px solid #000000 !important;
+        color: #000000 !important;
+        background: none !important;
+        border-radius: 2px !important;
+        font-size: 10px !important;
+    }
+    
+    .badge-renew {
+        background: #f2f2f2 !important;
+        font-weight: 800 !important;
+    }
+    
+    /* Dynamic VIN Barcode representation via pure CSS */
+    .instruction-header-title::after {
+        content: "";
+        display: block;
+        width: 140px;
+        height: 35px;
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: repeating-linear-gradient(
+            90deg,
+            #000,
+            #000 2px,
+            #fff 2px,
+            #fff 4px,
+            #000 4px,
+            #000 5px,
+            #fff 5px,
+            #fff 8px
+        );
+        opacity: 0.85;
+    }
+    
+    /* Document Watermark */
+    .dashboard-section::before {
+        content: "PORSCHE CERTIFIED";
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(-45deg);
+        font-size: 90px;
+        font-weight: 900;
+        color: rgba(0, 0, 0, 0.035);
+        pointer-events: none;
+        z-index: -1;
+        letter-spacing: 10px;
+    }
+    
+    /* Add master technician signoff dynamically */
+    .dashboard-grid {
+        position: relative;
+    }
+    
+    /* Embed beautiful signature area */
+    .dashboard-section::after {
+        content: "AUTHORIZED BY PORSCHE MASTER TECHNICIAN: ___________________________    STAMP / DATE: _________________";
+        display: block;
+        margin-top: 60px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #000000;
+        letter-spacing: 1px;
+        text-align: center;
+        border-top: 1px dashed #000000;
+        padding-top: 25px;
+        page-break-inside: avoid;
+        break-inside: avoid;
     }
 }
