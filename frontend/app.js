@@ -878,6 +878,102 @@ document.addEventListener("DOMContentLoaded", () => {
                     name_en: "HV Insulation Tester"
                 }
             ]
+        },
+        r1200gs: {
+            title_ka: "BMW R 1200 GS - ძრავის ზეთისა და ფილტრის შეცვლა",
+            title_en: "BMW R 1200 GS - Engine Oil & Filter Replacement Service",
+            labor_time: "0.8 Hours (სთ) [8 FRU]",
+            steps: [
+                {
+                    step_number: 1,
+                    description_ka: "მოათავსეთ მოტოციკლი სწორ ზედაპირზე ცენტრალურ სადგამზე (Center Stand) და დააზღვიეთ გორებისგან.",
+                    description_en: "Position the motorcycle on a level surface on its center stand and secure from rolling."
+                },
+                {
+                    step_number: 2,
+                    description_ka: "აამუშავეთ ძრავი და გაათბეთ სამუშაო ტემპერატურამდე (სანამ რადიატორის ვენტილატორი არ ჩაირთვება), რათა ზეთი გათხელდეს.",
+                    description_en: "Start the engine and warm it up to operating temperature until oil flows freely."
+                },
+                {
+                    step_number: 3,
+                    description_ka: "მოათავსეთ ზეთის შესაგროვებელი ტაფა (Oil Drain Pan) ძრავის ქვეშ. მოხსენით ძრავის დამცავი ფირფიტა (Engine Guard plate).",
+                    description_en: "Place an oil drain pan under the engine. Remove the engine underbody protection shield plate."
+                },
+                {
+                    step_number: 4,
+                    description_ka: "სპეციალური 8მმ ექვსწახნაგა გასაღებით მოუშვით ძრავის ზეთის გამოსაშვები ჭანჭიკი (Drain Plug) და სრულად დააცალეთ ზეთი.",
+                    description_en: "Unscrew the engine oil drain plug using an 8mm hex tool and drain the oil completely."
+                },
+                {
+                    step_number: 5,
+                    description_ka: "სპეციალური ფილტრის გასაღებით (Oil Filter Wrench) მოხსენით ძველი ზეთის ფილტრი.",
+                    description_en: "Remove the old oil filter using a dedicated oil filter wrench tool."
+                },
+                {
+                    step_number: 6,
+                    description_ka: "წაუსვით ახალი ძრავის ზეთი ახალი ფილტრის რეზინის შუასადებს. დაამონტაჟეთ ახალი ფილტრი და დაუჭირეთ 11 Nm ძალით.",
+                    description_en: "Apply clean engine oil to the rubber seal of the new oil filter. Install new filter and torque to 11 Nm.",
+                    warning_ka: "არ გადაუჭიროთ ფილტრს ზედმეტად, წინააღმდეგ შემთხვევაში დააზიანებთ რეზინის შუასადებს!",
+                    warning_en: "Do not over-tighten the oil filter to avoid damaging the rubber ring seal!"
+                },
+                {
+                    step_number: 7,
+                    description_ka: "შეცვალეთ ზეთის სანიაღვრე ჭანჭიკის სპილენძის საყელური (Crush Washer). დაუჭირეთ ჭანჭიკი 42 Nm ძალით.",
+                    description_en: "Replace the copper crush washer on the drain plug. Tighten the drain plug to 42 Nm."
+                },
+                {
+                    step_number: 8,
+                    description_ka: "ზეთის შესავსები ყელიდან ჩაასხით ზუსტად 4.0 ლიტრი რეკომენდებული 15W-50 სიბლანტის ზეთი (ან SAE 5W-40 Boxer-ისთვის).",
+                    description_en: "Fill the engine with exactly 4.0 liters of recommended 15W-50 oil viscosity (or SAE 5W-40 for newer boxer engines)."
+                },
+                {
+                    step_number: 9,
+                    description_ka: "დაახრახნეთ შესავსები ხუფის სახურავი. დაქოქეთ ძრავი, შეამოწმეთ ზეთის წნევის ინდიკატორი და გაჟონვები. დააბრუნეთ ძრავის დამცავი ფირფიტა.",
+                    description_en: "Reinstall the oil filler cap. Start the engine, check oil pressure warning light and look for leaks. Reinstall the guard plate."
+                }
+            ],
+            parts: [
+                {
+                    part_number: "11.42.7.673.541",
+                    description_ka: "BMW Boxer-ის ორიგინალი ზეთის ფილტრი (Oil Filter)",
+                    description_en: "Original BMW Engine Oil Filter",
+                    status: "renew"
+                },
+                {
+                    part_number: "07.11.9.963.252",
+                    description_ka: "სანიაღვრე ჭანჭიკის სპილენძის საყელური (Crush Washer A20x24)",
+                    description_en: "Copper Crush Gasket A20x24",
+                    status: "renew"
+                },
+                {
+                    part_number: "83.21.2.405.947",
+                    description_ka: "BMW Advantec Ultimate 15W-50 ძრავის ზეთი (4 ლიტრი)",
+                    description_en: "BMW Advantec Ultimate 15W-50 Engine Oil (4 Liters)",
+                    status: "renew"
+                }
+            ],
+            key_details_ka: [
+                "ზეთის სანიაღვრე ჭანჭიკის დაჭერის მომენტი: 42 Nm",
+                "ზეთის ფილტრის დაჭერის მომენტი: 11 Nm",
+                "ზეთის საერთო მოცულობა: 4.0 ლიტრი (ფილტრის ჩათვლით)"
+            ],
+            key_details_en: [
+                "Oil drain plug torque specification: 42 Nm",
+                "Oil filter torque specification: 11 Nm",
+                "Total oil capacity: 4.0 liters (including filter replacement)"
+            ],
+            special_tools: [
+                {
+                    tool_number: "83.30.0.401.554",
+                    name_ka: "ფილტრის მოხსნის სპეციალური გასაღებ-ჭიქა",
+                    name_en: "Oil Filter wrench cup 76mm"
+                },
+                {
+                    tool_number: "VAS-6558",
+                    name_ka: "დინამომეტრული გასაღები 10-100 Nm",
+                    name_en: "Torque Wrench 10-100 Nm"
+                }
+            ]
         }
     };
 
@@ -1256,6 +1352,78 @@ document.addEventListener("DOMContentLoaded", () => {
     function processVoiceCommand(command) {
         const steps = document.querySelectorAll(".step-card");
         
+        // R1200GS persistent cache search and load simulation
+        if ((command.includes("ახსენი") || command.includes("მოძებნე") || command.includes("ჩატვირთე") || command.includes("explain") || command.includes("load")) && 
+            (command.includes("r1200gs") || command.includes("r 1200") || command.includes("მოტოციკლი") || command.includes("ზეთი") || command.includes("oil"))) {
+            
+            speakText("R1200GS-ის ზეთის შეცვლის ინსტრუქცია მოიძებნა სუპაბეისის ქეში. ვიწყებ ჩატვირთვას.");
+            
+            setTimeout(() => {
+                const uploadSection = document.getElementById("upload-section");
+                const landingContainer = document.getElementById("landing-container") || uploadSection;
+                const loadingSection = document.getElementById("loading-section");
+                const dashboardSection = document.getElementById("dashboard-section");
+                
+                if (landingContainer) landingContainer.classList.add("hidden");
+                if (dashboardSection) dashboardSection.classList.add("hidden");
+                if (loadingSection) loadingSection.classList.remove("hidden");
+                
+                const loadingStatusText = document.getElementById("loading-status-text");
+                if (loadingStatusText) {
+                    loadingStatusText.textContent = "ძებნა სუპაბეისის ბაზაში (pgvector RAG) და ჩატვირთვა...";
+                }
+                
+                // Tachometer physics simulation variables
+                let currentRpm = 0.0;
+                let state = "revving"; 
+                let bounceCount = 0;
+                const tachoStartTime = Date.now();
+                
+                // Start a Boxer-engine sound flat tone using Web Audio API!
+                startEngineSound();
+                updateEngineSound(1.2);
+                
+                const progressInterval = setInterval(() => {
+                    const elapsed = Date.now() - tachoStartTime;
+                    
+                    if (state === "revving") {
+                        currentRpm = (elapsed / 300) * 9.0;
+                        if (currentRpm >= 9.0) {
+                            currentRpm = 9.0;
+                            state = "bouncing";
+                        }
+                    } else if (state === "bouncing") {
+                        currentRpm = currentRpm === 9.0 ? 8.6 : 9.0;
+                        bounceCount++;
+                        if (bounceCount > 8) {
+                            state = "finishing";
+                        }
+                    } else if (state === "finishing") {
+                        currentRpm = 9.0;
+                    }
+                    
+                    setTachometer(currentRpm);
+                }, 30);
+                
+                setTimeout(() => {
+                    clearInterval(progressInterval);
+                    stopEngineSound();
+                    
+                    setTachometer(0.0);
+                    const loadingContainer = document.getElementById("loading-section");
+                    if (loadingContainer) loadingContainer.classList.remove("rumble-active");
+                    const shiftLight = document.getElementById("tacho-shift-light");
+                    if (shiftLight) shiftLight.classList.remove("flash-active");
+                    
+                    const rData = DEMO_DATA.r1200gs;
+                    renderDashboard(rData);
+                    speakText("BMW R1200GS-ის ზეთის შეცვლის ინსტრუქცია წარმატებით ჩაიტვირთა სუპაბეისის მეხსიერებიდან. პირველი ნაბიჯი: მოათავსეთ მოტოციკლი ცენტრალურ სადგამზე.");
+                }, 1500); 
+            }, 1000);
+            
+            return;
+        }
+
         // Command 1: "შემდეგი" (Next Step)
         if (command.includes("შემდეგი") || command.includes("შემდეგ") || command.includes("next")) {
             const activeStep = document.querySelector(".step-card:not(.completed)");
