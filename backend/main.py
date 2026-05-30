@@ -972,6 +972,18 @@ def test_supabase():
         logger.error(f"Error during Supabase test: {e}")
         return {"status": "error", "message": str(e), "details": details}
 
+@app.get("/organize-supabase")
+def run_organize_supabase():
+    """Trigger Supabase Storage bucket reorganization and cleanup of cache/manuals/test files."""
+    try:
+        from organize_supabase import organize_bucket
+        report = organize_bucket()
+        logger.info(f"Supabase organization triggered via API. Result: {report['status']}")
+        return report
+    except Exception as e:
+        logger.error(f"Failed to run Supabase organization: {e}")
+        return {"status": "error", "message": str(e)}
+
 @app.get("/test-gemini")
 def test_gemini():
     """Diagnostic endpoint to test all Gemini API keys in the pool and return exact responses."""
