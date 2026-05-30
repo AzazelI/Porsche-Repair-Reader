@@ -34,8 +34,11 @@ body.porsche-theme {
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
-    background-image: radial-gradient(circle at top right, rgba(213, 0, 28, 0.04), transparent 50%),
-                      radial-gradient(circle at bottom left, rgba(208, 158, 58, 0.02), transparent 40%);
+    background-image: radial-gradient(circle at 10% 20%, rgba(213, 0, 28, 0.05) 0%, transparent 40%),
+                      radial-gradient(circle at 90% 80%, rgba(0, 204, 102, 0.03) 0%, transparent 40%),
+                      linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                      linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
 }
 
 /* Glassmorphism utility */
@@ -1426,6 +1429,521 @@ body.theme-track .torque-gauge-fill {
     color: var(--color-text-grey);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+}
+
+/* ==========================================
+   COCKPIT UI RECONSTRUCTED STYLES & REFORMS
+   ========================================== */
+
+/* Laser Scanner Animation */
+.laser-scanner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--color-guards-red), transparent);
+    box-shadow: 0 0 15px 3px var(--color-guards-red);
+    opacity: 0.85;
+    z-index: 5;
+    animation: laser-sweep 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes laser-sweep {
+    0% { top: 0%; opacity: 0.3; }
+    5% { opacity: 0.95; }
+    50% { top: 100%; opacity: 0.95; }
+    95% { opacity: 0.95; }
+    100% { top: 0%; opacity: 0.3; }
+}
+
+/* Landing Container holds Upload + Demos + Telemetry */
+.landing-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    animation: fadeIn 0.8s ease-out;
+}
+
+/* Interactive Demo Cards Section */
+.demo-section {
+    width: 100%;
+    max-width: 1200px;
+    margin: 10px auto;
+}
+
+.section-title {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.section-title h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-text-white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.section-title h2 i {
+    color: var(--color-guards-red);
+}
+
+body.theme-track .section-title h2 i {
+    color: var(--color-amber-gold);
+}
+
+.section-title p {
+    font-size: 13px;
+    color: var(--color-text-grey);
+    margin-top: 6px;
+}
+
+.demo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 25px;
+    width: 100%;
+}
+
+.demo-card {
+    position: relative;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.demo-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.03), transparent 70%);
+    z-index: 1;
+    pointer-events: none;
+}
+
+.demo-card-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.demo-card-badge.red {
+    background-color: rgba(213, 0, 28, 0.15);
+    color: var(--color-guards-red);
+    border: 1px solid rgba(213, 0, 28, 0.3);
+}
+
+.demo-card-badge.green {
+    background-color: rgba(0, 204, 102, 0.15);
+    color: #00cc66;
+    border: 1px solid rgba(0, 204, 102, 0.3);
+}
+
+.demo-card-badge.blue {
+    background-color: rgba(0, 150, 255, 0.15);
+    color: #0096ff;
+    border: 1px solid rgba(0, 150, 255, 0.3);
+}
+
+.demo-card-content h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-white);
+    margin-top: 15px;
+    margin-bottom: 8px;
+}
+
+.demo-card-content p {
+    font-size: 13px;
+    color: var(--color-text-grey);
+    line-height: 1.5;
+}
+
+.demo-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 25px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 15px;
+}
+
+.demo-card-footer span {
+    font-size: 12px;
+    color: var(--color-text-grey);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-demo-start {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text-white);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.3s ease;
+}
+
+/* Card Specific Neon Glow Hover Effects */
+.demo-card.gt3:hover {
+    border-color: var(--color-guards-red);
+    box-shadow: 0 10px 30px rgba(213, 0, 28, 0.12), var(--box-shadow-premium);
+    transform: translateY(-5px);
+}
+
+.demo-card.gt3:hover .btn-demo-start {
+    color: var(--color-guards-red);
+    text-shadow: 0 0 10px rgba(213, 0, 28, 0.5);
+}
+
+.demo-card.cayenne:hover {
+    border-color: #00cc66;
+    box-shadow: 0 10px 30px rgba(0, 204, 102, 0.12), var(--box-shadow-premium);
+    transform: translateY(-5px);
+}
+
+.demo-card.cayenne:hover .btn-demo-start {
+    color: #00cc66;
+    text-shadow: 0 0 10px rgba(0, 204, 102, 0.5);
+}
+
+.demo-card.taycan:hover {
+    border-color: #0096ff;
+    box-shadow: 0 10px 30px rgba(0, 150, 255, 0.12), var(--box-shadow-premium);
+    transform: translateY(-5px);
+}
+
+.demo-card.taycan:hover .btn-demo-start {
+    color: #0096ff;
+    text-shadow: 0 0 10px rgba(0, 150, 255, 0.5);
+}
+
+/* Telemetry & Sport Chrono Section */
+.telemetry-section {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto 30px auto;
+    padding: 30px;
+}
+
+.telemetry-grid {
+    display: grid;
+    grid-template-columns: 1fr 2.2fr;
+    gap: 40px;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .telemetry-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+}
+
+/* Sport Chrono Visual Clock Widget */
+.chrono-widget {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.chrono-face {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #1a1a20, #0a0a0d);
+    border: 5px solid #28282e;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.6), inset 0 2px 10px rgba(255,255,255,0.05);
+}
+
+.chrono-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background-color: var(--color-guards-red);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    box-shadow: 0 0 8px var(--color-guards-red);
+}
+
+.chrono-ticks {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.chrono-tick {
+    position: absolute;
+    background-color: var(--color-text-grey);
+}
+
+.chrono-tick.tick-12 {
+    top: 6px;
+    left: 50%;
+    width: 3px;
+    height: 12px;
+    transform: translateX(-50%);
+    background-color: var(--color-guards-red);
+}
+
+.chrono-tick.tick-3 {
+    right: 6px;
+    top: 50%;
+    width: 12px;
+    height: 3px;
+    transform: translateY(-50%);
+}
+
+.chrono-tick.tick-6 {
+    bottom: 6px;
+    left: 50%;
+    width: 3px;
+    height: 12px;
+    transform: translateX(-50%);
+}
+
+.chrono-tick.tick-9 {
+    left: 6px;
+    top: 50%;
+    width: 12px;
+    height: 3px;
+    transform: translateY(-50%);
+}
+
+.chrono-hand {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    transform-origin: bottom center;
+    border-radius: 2px;
+}
+
+.chrono-hand.second {
+    width: 1.5px;
+    height: 60px;
+    background-color: var(--color-guards-red);
+    z-index: 8;
+    box-shadow: 0 0 6px rgba(213, 0, 28, 0.4);
+    transform: rotate(0deg);
+}
+
+.chrono-hand.minute {
+    width: 3px;
+    height: 48px;
+    background-color: var(--color-text-white);
+    z-index: 7;
+    transform: rotate(0deg);
+}
+
+.chrono-digital {
+    text-align: center;
+}
+
+.chrono-time-display {
+    font-family: monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-text-white);
+    background-color: rgba(0, 0, 0, 0.3);
+    padding: 6px 16px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+    display: inline-flex;
+    align-items: baseline;
+}
+
+.chrono-ms {
+    color: var(--color-guards-red);
+    font-size: 14px;
+}
+
+/* Telemetry Dashboard Style */
+.telemetry-status-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.telemetry-status-panel h3 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--color-text-white);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+}
+
+.telemetry-status-panel h3 i {
+    color: var(--color-guards-red);
+}
+
+.telemetry-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+@media (max-width: 480px) {
+    .telemetry-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.telemetry-item {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border);
+    padding: 12px 18px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.telemetry-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-grey);
+}
+
+.telemetry-value {
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-white);
+}
+
+/* Neon utilities */
+.text-green { color: #00cc66 !important; }
+.text-blue { color: #0096ff !important; }
+.text-amber { color: var(--color-amber-gold) !important; }
+
+/* Pulsating indicator dots */
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    position: relative;
+}
+
+.pulse-dot.green {
+    background-color: #00cc66;
+    box-shadow: 0 0 8px #00cc66;
+    animation: pulse-green 1.5s infinite;
+}
+
+.pulse-dot.amber {
+    background-color: var(--color-amber-gold);
+    box-shadow: 0 0 8px var(--color-amber-gold);
+    animation: pulse-amber 1.5s infinite;
+}
+
+.pulse-dot.blue {
+    background-color: #0096ff;
+    box-shadow: 0 0 8px #0096ff;
+    animation: pulse-blue 1.5s infinite;
+}
+
+@keyframes pulse-green {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(0, 204, 102, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 204, 102, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(0, 204, 102, 0); }
+}
+
+@keyframes pulse-amber {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(208, 158, 58, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(208, 158, 58, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(208, 158, 58, 0); }
+}
+
+@keyframes pulse-blue {
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(0, 150, 255, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 150, 255, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(0, 150, 255, 0); }
+}
+
+/* Simulated Waveform Animation */
+.telemetry-graph-wrapper {
+    height: 40px;
+    background-color: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.telemetry-wave-container {
+    display: flex;
+    align-items: center;
+    position: absolute;
+    width: 200%;
+    height: 100%;
+    top: 0;
+    left: 0;
+}
+
+.telemetry-wave {
+    height: 100%;
+    width: 100%;
+    background-repeat: repeat-x;
+    background-position: 0 center;
+    background-size: 80px 30px;
+}
+
+.telemetry-wave.line-1 {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 30'%3E%3Cpath d='M0,15 Q20,2 40,15 T80,15' fill='none' stroke='%2300cc66' stroke-width='1.5'/%3E%3C/svg%3E");
+    opacity: 0.6;
+    animation: wave-move 3s linear infinite;
+}
+
+.telemetry-wave.line-2 {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 30'%3E%3Cpath d='M0,15 Q20,28 40,15 T80,15' fill='none' stroke='%23d5001c' stroke-width='1'/%3E%3C/svg%3E");
+    opacity: 0.3;
+    animation: wave-move 5s linear infinite reverse;
+    margin-left: -40px;
+}
+
+@keyframes wave-move {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 /* ==========================================

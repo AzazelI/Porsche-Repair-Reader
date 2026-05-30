@@ -70,25 +70,133 @@
             </div>
         </div>
 
-        <!-- HERO UPLOAD SECTION -->
-        <section id="upload-section" class="upload-section">
-            <div class="hero-text">
-                <h1>Repair Instruction Reader</h1>
-                <p>სარემონტო ინსტრუქციების ინტელექტუალური ანალიზი. ატვირთეთ PDF მანუალი და მიიღეთ ტექნიკური ნაბიჯების ზუსტი თარგმანი, სათადარიგო ნაწილების სტრუქტურირებული ნუსხა და ნორმა-საათები წამებში.</p>
-            </div>
-            
-            <!-- Drag and Drop Zone -->
-            <div id="drop-zone" class="drop-zone glassmorphism">
-                <div class="drop-content">
-                    <div class="icon-pulsate">
-                        <i class="fa-solid fa-file-pdf"></i>
-                    </div>
-                    <h2>გადმოიტანეთ PDF ფაილი აქ</h2>
-                    <p>ან დააჭირეთ ასატვირთად</p>
-                    <input type="file" id="file-input" accept=".pdf" class="hidden-file-input">
+        <!-- LANDING CONTAINER (Upload + Demo Cards + Telemetry) -->
+        <div id="landing-container" class="landing-container">
+            <!-- HERO UPLOAD SECTION -->
+            <section id="upload-section" class="upload-section">
+                <div class="hero-text">
+                    <h1>Repair Instruction Reader</h1>
+                    <p>სარემონტო ინსტრუქციების ინტელექტუალური ანალიზი. ატვირთეთ PDF მანუალი და მიიღეთ ტექნიკური ნაბიჯების ზუსტი თარგმანი, სათადარიგო ნაწილების სტრუქტურირებული ნუსხა და ნორმა-საათები წამებში.</p>
                 </div>
-            </div>
-        </section>
+                
+                <!-- Drag and Drop Zone -->
+                <div id="drop-zone" class="drop-zone glassmorphism">
+                    <!-- Laser Scanner Animation Line -->
+                    <div class="laser-scanner"></div>
+                    <div class="drop-content">
+                        <div class="icon-pulsate">
+                            <i class="fa-solid fa-file-pdf"></i>
+                        </div>
+                        <h2>გადმოიტანეთ PDF ფაილი აქ</h2>
+                        <p>ან დააჭირეთ ასატვირთად</p>
+                        <input type="file" id="file-input" accept=".pdf" class="hidden-file-input">
+                    </div>
+                </div>
+            </section>
+
+            <!-- INTERACTIVE DEMO CARDS SECTION -->
+            <section id="demo-section" class="demo-section">
+                <div class="section-title">
+                    <h2><i class="fa-solid fa-car-side"></i> საცდელი რეჟიმი (Interactive Demo Mode)</h2>
+                    <p>აირჩიეთ Porsche-ს მოდელი და მყისიერად გამოსცადეთ საინჟინრო კოკპიტის ფუნქციონალი წინასწარ გაანალიზებული მონაცემებით</p>
+                </div>
+                <div class="demo-grid">
+                    <!-- Card 1: 911 GT3 -->
+                    <div class="demo-card glassmorphism gt3" data-demo="gt3">
+                        <div class="demo-card-badge red">911 GT3 (992)</div>
+                        <div class="demo-card-content">
+                            <h3>Exhaust System Assembly</h3>
+                            <p>სპორტული მაყუჩისა და გამონაბოლქვის სარქველების აწყობის ინსტრუქცია</p>
+                            <div class="demo-card-footer">
+                                <span><i class="fa-solid fa-clock"></i> 2.5 სთ</span>
+                                <span class="btn-demo-start">ჩატვირთვა <i class="fa-solid fa-chevron-right"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 2: Cayenne S -->
+                    <div class="demo-card glassmorphism cayenne" data-demo="cayenne">
+                        <div class="demo-card-badge green">Cayenne S (9YA)</div>
+                        <div class="demo-card-content">
+                            <h3>Air Intake & Snorkel</h3>
+                            <p>კარბონის შემშვები სისტემისა და სპორტული ფილტრის მონტაჟი</p>
+                            <div class="demo-card-footer">
+                                <span><i class="fa-solid fa-clock"></i> 1.8 სთ</span>
+                                <span class="btn-demo-start">ჩატვირთვა <i class="fa-solid fa-chevron-right"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Card 3: Taycan Turbo S -->
+                    <div class="demo-card glassmorphism taycan" data-demo="taycan">
+                        <div class="demo-card-badge blue">Taycan Turbo S</div>
+                        <div class="demo-card-content">
+                            <h3>HV Cooling Module</h3>
+                            <p>მაღალი ძაბვის ელემენტის გაგრილების სისტემის სრული სერვისი</p>
+                            <div class="demo-card-footer">
+                                <span><i class="fa-solid fa-clock"></i> 4.2 სთ</span>
+                                <span class="btn-demo-start">ჩატვირთვა <i class="fa-solid fa-chevron-right"></i></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LIVE GARAGE TELEMETRY & SPORT CHRONO SECTION -->
+            <section id="telemetry-section" class="telemetry-section glassmorphism">
+                <div class="telemetry-grid">
+                    
+                    <!-- Sport Chrono Clock Visual Widget -->
+                    <div class="chrono-widget">
+                        <div class="chrono-face">
+                            <div class="chrono-center"></div>
+                            <div class="chrono-ticks">
+                                <div class="chrono-tick tick-12"></div>
+                                <div class="chrono-tick tick-3"></div>
+                                <div class="chrono-tick tick-6"></div>
+                                <div class="chrono-tick tick-9"></div>
+                            </div>
+                            <div id="chrono-hand-second" class="chrono-hand second"></div>
+                            <div id="chrono-hand-minute" class="chrono-hand minute"></div>
+                        </div>
+                        <div class="chrono-digital">
+                            <span style="font-size: 9px; letter-spacing: 2px; color: var(--color-text-grey); font-weight: 700; display: block; text-align: center; margin-bottom: 4px;">SPORT CHRONO</span>
+                            <div class="chrono-time-display">
+                                <span id="chrono-live-hms">00:00:00</span><span id="chrono-live-ms" class="chrono-ms">.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Telemetry Stats Panel -->
+                    <div class="telemetry-status-panel">
+                        <h3><i class="fa-solid fa-chart-line"></i> GARAGE REAL-TIME TELEMETRY</h3>
+                        <div class="telemetry-stats-grid">
+                            <div class="telemetry-item">
+                                <span class="telemetry-label">Engine Status</span>
+                                <span class="telemetry-value text-green"><span class="pulse-dot green"></span> IDLE / READY</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span class="telemetry-label">Active API Keys</span>
+                                <span class="telemetry-value text-amber"><span class="pulse-dot amber"></span> 5 KEYS OPERATIONAL</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span class="telemetry-label">Supabase Sync</span>
+                                <span class="telemetry-value text-blue"><span class="pulse-dot blue"></span> SYNC'D / ENCRYPTED</span>
+                            </div>
+                            <div class="telemetry-item">
+                                <span class="telemetry-label">Latency / Security</span>
+                                <span class="telemetry-value">12 ms / SECURE SSL</span>
+                            </div>
+                        </div>
+                        <div class="telemetry-graph-wrapper">
+                            <div class="telemetry-wave-container">
+                                <div class="telemetry-wave line-1"></div>
+                                <div class="telemetry-wave line-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </section>
+        </div>
 
         <!-- SPEEDOMETER LOADING SECTION (Hidden by default) -->
         <section id="loading-section" class="loading-section hidden">
