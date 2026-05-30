@@ -249,7 +249,7 @@ def upload_to_supabase(file_path: str, model_name: str, repair_title: str) -> Op
     if not sanitized_repair:
         sanitized_repair = "Repair_Instruction"
         
-    custom_filename = f"{sanitized_model}_{sanitized_repair}.pdf"
+    custom_filename = f"manuals/{sanitized_model}_{sanitized_repair}.pdf"
     
     # Supabase Storage REST API object URL
     url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{custom_filename}"
@@ -441,7 +441,7 @@ def get_cached_analysis_from_supabase(file_hash: str) -> Optional[dict]:
         return None
         
     bucket_name = "repair-manuals"
-    cache_filename = f"cache_{file_hash}.json"
+    cache_filename = f"cache/cache_{file_hash}.json"
     url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{cache_filename}"
     
     headers = {
@@ -469,7 +469,7 @@ def upload_cached_analysis_to_supabase(file_hash: str, data: dict):
         return
         
     bucket_name = "repair-manuals"
-    cache_filename = f"cache_{file_hash}.json"
+    cache_filename = f"cache/cache_{file_hash}.json"
     url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}/{cache_filename}"
     
     headers = {
@@ -959,7 +959,12 @@ def test_supabase():
         details["response_text"] = response.text
         
         if response.status_code == 200:
-            return {"status": "success", "message": "Successfully uploaded test file to Supabase Storage!", "details": details}
+            # Delete the test file immediately to prevent cluttering the bucket!
+            try:
+                requests.delete(url, headers=headers)
+            except Exception as de:
+                logger.error(f"Failed to delete test connection file: {de}")
+            return {"status": "success", "message": "Successfully uploaded and cleaned up test file in Supabase Storage!", "details": details}
             
         return {"status": "failed", "message": f"Upload failed with status code {response.status_code}", "details": details}
         
@@ -1089,7 +1094,7 @@ def clear_cache(file_hash: str):
     
     if supabase_url and supabase_key:
         bucket_name = "repair-manuals"
-        cache_filename = f"cache_{file_hash}.json"
+        cache_filename = f"cache/cache_{file_hash}.json"
         url = f"{supabase_url.rstrip('/')}/storage/v1/object/{bucket_name}"
         headers = {
             "Authorization": f"Bearer {supabase_key}",
