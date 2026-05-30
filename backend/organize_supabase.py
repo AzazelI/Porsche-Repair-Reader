@@ -30,6 +30,7 @@ def organize_bucket():
     
     list_url = f"{supabase_url.rstrip('/')}/storage/v1/object/list/{bucket_name}"
     payload = {
+        "prefix": "",
         "limit": 100,
         "offset": 0,
         "sortBy": {"column": "name", "order": "asc"}
