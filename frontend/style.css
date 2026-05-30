@@ -1446,6 +1446,13 @@ body.theme-track .torque-gauge-fill {
     .dashboard-section {
         display: block !important;
     }
+    /* Fix print layouts dropping elements due to flex/grid page wraps and overflow cutoffs */
+    .dashboard-grid, .right-pane, .summary-cards, .table-container, .panel, .steps-container {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+    }
     .glassmorphism {
         background: #ffffff !important;
         border: 1px solid #cccccc !important;
