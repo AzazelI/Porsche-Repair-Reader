@@ -1458,7 +1458,17 @@ body.theme-track .torque-gauge-fill {
     }
     .step-card {
         border-left: 4px solid #d5001c !important;
-        page-break-inside: avoid;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    .panel {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin-bottom: 20px !important;
+    }
+    tr, li, .torque-widget, .tool-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
     .badge-renew {
         background: #ffe6e6 !important;
