@@ -1128,7 +1128,16 @@ def read_root():
 @app.head("/health")
 def health_check():
     """Health check endpoint."""
-    return {"status": "ok", "api_key_configured": bool(os.getenv("GEMINI_API_KEY"))}
+    gemini_keys = [k.strip() for k in os.getenv("GEMINI_API_KEY", "").split(",") if k.strip()]
+    groq_keys = [k.strip() for k in os.getenv("GROQ_API_KEY", "").split(",") if k.strip()]
+    total_keys = len(gemini_keys) + len(groq_keys)
+    return {
+        "status": "ok", 
+        "api_key_configured": bool(os.getenv("GEMINI_API_KEY")),
+        "gemini_keys_count": len(gemini_keys),
+        "groq_keys_count": len(groq_keys),
+        "total_keys_count": total_keys
+    }
 
 @app.get("/clear-cache/{file_hash}")
 def clear_cache(file_hash: str):

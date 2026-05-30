@@ -540,6 +540,24 @@ document.addEventListener("DOMContentLoaded", () => {
         updateLiveChrono();
     }
 
+    // Fetch live telemetry data on load to dynamically reflect active API keys count
+    fetch(`${savedApiUrl}/health`)
+    .then(res => res.json())
+    .then(data => {
+        const keyStatusElement = document.querySelector(".telemetry-item:nth-child(2) .telemetry-value");
+        if (keyStatusElement && data.total_keys_count !== undefined) {
+            const geminiCount = data.gemini_keys_count || 0;
+            const groqCount = data.groq_keys_count || 0;
+            const totalCount = data.total_keys_count || 0;
+            keyStatusElement.innerHTML = `<span class="pulse-dot amber"></span> ${totalCount} KEYS OPERATIONAL`;
+            keyStatusElement.setAttribute("title", `Gemini: ${geminiCount} გასაღები, Groq: ${groqCount} გასაღები`);
+            keyStatusElement.style.cursor = "help";
+        }
+    })
+    .catch(err => {
+        console.warn("Failed to fetch live health telemetry:", err);
+    });
+
     // ==========================================
     // INTERACTIVE DEMO MODE DATA & CONTROLLER
     // ==========================================
