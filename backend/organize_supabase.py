@@ -59,7 +59,8 @@ def organize_bucket():
                 continue
                 
             if name == "test_connection.txt":
-                del_resp = requests.delete(f"{delete_url}/{name}", headers=headers)
+                del_payload = {"prefixes": [name]}
+                del_resp = requests.delete(delete_url, json=del_payload, headers=headers)
                 if del_resp.status_code == 200:
                     report["files_deleted"].append(name)
                 else:
