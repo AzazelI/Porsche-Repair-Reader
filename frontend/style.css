@@ -1768,6 +1768,14 @@ body.theme-track .section-title h2 i {
     transform: rotate(0deg);
 }
 
+.chrono-hand.hour {
+    width: 4px;
+    height: 35px;
+    background-color: var(--color-text-white);
+    z-index: 6;
+    transform: rotate(0deg);
+}
+
 .chrono-hand.minute {
     width: 3px;
     height: 48px;

@@ -560,8 +560,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
     const liveHms = document.getElementById("chrono-live-hms");
     const liveMs = document.getElementById("chrono-live-ms");
-    const handSecond = document.getElementById("chrono-hand-second");
+    const handHour = document.getElementById("chrono-hand-hour");
     const handMinute = document.getElementById("chrono-hand-minute");
+    const handSecond = document.getElementById("chrono-hand-second");
 
     function updateLiveChrono() {
         const now = new Date();
@@ -582,16 +583,22 @@ document.addEventListener("DOMContentLoaded", () => {
             liveMs.textContent = `.${msStr}`;
         }
 
-        // Clock hands analog sweep movement
-        if (handSecond) {
-            const secDeg = ((secs + ms / 1000) / 60) * 360;
-            handSecond.style.transform = `rotate(${secDeg}deg)`;
+        // Hour hand moves 360 deg in 12 hours (30 deg per hour + 0.5 deg per minute for smooth sweep)
+        if (handHour) {
+            const hourDeg = ((hrs % 12) * 30) + (mins * 0.5);
+            handHour.style.transform = `rotate(${hourDeg}deg)`;
         }
 
         // Minute hand moves 360 deg in 60 minutes
         if (handMinute) {
             const minDeg = ((mins + secs / 60) / 60) * 360;
             handMinute.style.transform = `rotate(${minDeg}deg)`;
+        }
+
+        // Clock hands analog sweep movement
+        if (handSecond) {
+            const secDeg = ((secs + ms / 1000) / 60) * 360;
+            handSecond.style.transform = `rotate(${secDeg}deg)`;
         }
 
         requestAnimationFrame(updateLiveChrono);
