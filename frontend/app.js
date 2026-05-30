@@ -424,9 +424,34 @@ document.addEventListener("DOMContentLoaded", () => {
                 const li = document.createElement("li");
                 const originalEn = data.key_details_en && data.key_details_en[index] ? data.key_details_en[index] : "";
                 
+                // Dynamic Torque Gauge check
+                const torqueRegex = /\b(\d+)\s*Nm\b/i;
+                const torqueMatch = (detail + " " + originalEn).match(torqueRegex);
+                let torqueGaugeHtml = "";
+                
+                if (torqueMatch) {
+                    const torqueVal = parseInt(torqueMatch[1], 10);
+                    const percent = Math.min(100, Math.round((torqueVal / 150) * 100));
+                    torqueGaugeHtml = `
+                        <div class="torque-widget">
+                            <svg class="torque-gauge-svg" viewBox="0 0 36 36">
+                                <path class="torque-gauge-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path class="torque-gauge-fill" stroke-dasharray="${percent}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div>
+                                <div class="torque-value-text">${torqueVal} Nm</div>
+                                <div class="torque-label">დაჭერის მომენტი (Torque)</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
                 li.innerHTML = `
-                    <strong>${detail}</strong>
-                    ${originalEn ? `<span class="detail-en">${originalEn}</span>` : ""}
+                    <div>
+                        <strong>${detail}</strong>
+                        ${originalEn ? `<span class="detail-en">${originalEn}</span>` : ""}
+                        ${torqueGaugeHtml}
+                    </div>
                 `;
                 detailsContainer.appendChild(li);
             });
@@ -458,6 +483,14 @@ document.addEventListener("DOMContentLoaded", () => {
         uploadSection.classList.remove("hidden");
         fileInput.value = "";
     });
+    
+    // Printable job card trigger
+    const btnPrint = document.getElementById("btn-print");
+    if (btnPrint) {
+        btnPrint.addEventListener("click", () => {
+            window.print();
+        });
+    }
 });
 
 // Global function to toggle English version of steps (needed for inline onclick)

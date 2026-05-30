@@ -1299,3 +1299,182 @@ body.porsche-theme.theme-sport .step-check-btn:hover {
 .glassmorphism:hover::before {
     left: 125%;
 }
+
+/* ==========================================
+   PORSCHE PREMIUM CUSTOM SCROLLBARS
+   ========================================== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: var(--color-bg-darkest);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 4px;
+    border: 1px solid var(--color-bg-darkest);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-guards-red);
+}
+
+/* ==========================================
+   PORSCHE DASHBOARD STITCH BORDERS
+   ========================================== */
+.panel {
+    position: relative;
+    overflow: hidden;
+}
+.panel::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--color-guards-red), transparent);
+    opacity: 0.7;
+    z-index: 2;
+    transition: background 0.3s ease;
+}
+
+/* Dynamic stitch colors based on Mode Dial Selection */
+body.theme-sport .panel::after {
+    background: linear-gradient(90deg, transparent, var(--color-guards-red), transparent);
+}
+body.theme-track .panel::after {
+    background: linear-gradient(90deg, transparent, var(--color-amber-gold), transparent);
+}
+
+/* ==========================================
+   LUXURY BRANDED STATUS BADGES
+   ========================================== */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.badge-renew {
+    background-color: rgba(213, 0, 28, 0.1);
+    color: #ff3344;
+    border: 1px solid rgba(213, 0, 28, 0.3);
+    box-shadow: 0 0 10px rgba(213, 0, 28, 0.1);
+    animation: pulse-red 2s infinite alternate;
+}
+.badge-if-necessary {
+    background-color: rgba(138, 138, 147, 0.1);
+    color: #b0b0b8;
+    border: 1px solid rgba(138, 138, 147, 0.2);
+}
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 5px rgba(213, 0, 28, 0.1); }
+    100% { box-shadow: 0 0 15px rgba(213, 0, 28, 0.3); }
+}
+
+/* ==========================================
+   INTERACTIVE SVG TORQUE GAUGES
+   ========================================== */
+.torque-widget {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border);
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-top: 8px;
+    transition: all 0.3s ease;
+}
+.torque-widget:hover {
+    border-color: var(--color-border-glow);
+    background: rgba(255, 255, 255, 0.03);
+}
+.torque-gauge-svg {
+    width: 48px;
+    height: 48px;
+    transform: rotate(-90deg); /* Start from top */
+}
+.torque-gauge-bg {
+    fill: none;
+    stroke: var(--color-border);
+    stroke-width: 3.5;
+}
+.torque-gauge-fill {
+    fill: none;
+    stroke: var(--color-guards-red);
+    stroke-width: 3.5;
+    stroke-linecap: round;
+    transition: stroke-dasharray 1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+body.theme-track .torque-gauge-fill {
+    stroke: var(--color-amber-gold);
+}
+.torque-value-text {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-white);
+}
+.torque-label {
+    font-size: 10px;
+    color: var(--color-text-grey);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ==========================================
+   WORKSHOP PRINT SHEET (PRINTABLE JOB CARD)
+   ========================================== */
+@media print {
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+    .porsche-navbar, .upload-section, .loading-section, .action-footer, .porsche-footer, #settings-toggle {
+        display: none !important;
+    }
+    .cockpit-container {
+        padding: 0 !important;
+        max-width: 100% !important;
+    }
+    .dashboard-section {
+        display: block !important;
+    }
+    .glassmorphism {
+        background: #ffffff !important;
+        border: 1px solid #cccccc !important;
+        color: #000000 !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+    }
+    .panel::after {
+        display: none !important;
+    }
+    .step-card {
+        border-left: 4px solid #d5001c !important;
+        page-break-inside: avoid;
+    }
+    .badge-renew {
+        background: #ffe6e6 !important;
+        color: #d5001c !important;
+        border: 1px solid #d5001c !important;
+    }
+    .badge-if-necessary {
+        background: #f2f2f2 !important;
+        color: #555555 !important;
+        border: 1px solid #cccccc !important;
+    }
+    .torque-widget {
+        border: 1px solid #cccccc !important;
+        background: #fdfdfd !important;
+    }
+    .torque-value-text, .torque-label, .part-title-ka, .step-desc-ka, .step-number {
+        color: #000000 !important;
+    }
+}

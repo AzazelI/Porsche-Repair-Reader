@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Porsche Repair Instruction Reader</title>
+    <meta name="description" content="Porsche Aftersales Intelligent Repair Instruction Reader - AI-powered translation and technical extraction tool.">
+    <meta name="keywords" content="Porsche, Aftersales, Repair Instruction Reader, Technical Translation, Automotive">
+    <meta property="og:title" content="Porsche Repair Instruction Reader">
+    <meta property="og:description" content="AI-powered mechanical translation and torque specification extractor for professional workshops.">
     <!-- Google Fonts: Outfit for premium modern feel -->
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- FontAwesome for icons -->
@@ -26,9 +30,9 @@
             <div class="porsche-mode-selector" title="მართვის რეჟიმი (თემა)">
                 <span class="mode-label">MODE</span>
                 <div class="mode-dial-wrapper">
-                    <button class="btn-mode active" data-mode="normal" title="Normal - Carbon Dark">N</button>
-                    <button class="btn-mode" data-mode="sport" title="Sport - Guards Red">S</button>
-                    <button class="btn-mode" data-mode="track" title="Track / GT - Chrono Gold">GT</button>
+                    <button class="btn-mode active" data-mode="normal" aria-label="Normal Mode: Carbon Dark" title="Normal - Carbon Dark">N</button>
+                    <button class="btn-mode" data-mode="sport" aria-label="Sport Mode: Guards Red" title="Sport - Guards Red">S</button>
+                    <button class="btn-mode" data-mode="track" aria-label="Track Mode: Chrono Gold" title="Track / GT - Chrono Gold">GT</button>
                 </div>
             </div>
             <button id="settings-toggle" class="btn-icon hidden" title="პარამეტრები (API Key)">
@@ -214,6 +218,7 @@
             <!-- Reset Button to upload another -->
             <div class="action-footer">
                 <button id="btn-reset" class="btn-secondary"><i class="fa-solid fa-arrow-left"></i> ახალი ფაილის ატვირთვა</button>
+                <button id="btn-print" class="btn-primary" style="margin-left: 15px;"><i class="fa-solid fa-print"></i> სამუშაო ბარათის ბეჭდვა</button>
             </div>
 
         </section>
