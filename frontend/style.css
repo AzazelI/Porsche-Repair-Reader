@@ -91,6 +91,20 @@ body.porsche-theme {
     margin-left: 5px;
 }
 
+.logo-tegeta-svg {
+    height: 38px;
+    width: auto;
+    margin-left: 10px;
+    vertical-align: middle;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+}
+
+.logo-tegeta-svg:hover {
+    transform: scale(1.05);
+}
+
 .brand-porsche {
     font-size: 20px;
     font-weight: 800;
