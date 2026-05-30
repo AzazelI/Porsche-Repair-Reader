@@ -123,27 +123,74 @@ GEMINI_SCHEMA = {
     "required": ["title_en", "title_ka", "model_name", "labor_time", "key_details_en", "key_details_ka", "parts", "steps", "special_tools"]
 }
 
+def smart_should_skip_page(page_text: str, page_index: int, total_pages: int) -> bool:
+    """
+    Analyzes page text and determines if it is a non-technical cover page, Table of Contents, 
+    legal disclaimer, or blank page to drastically reduce token size and processing time.
+    """
+    if not page_text:
+        return True
+        
+    stripped = page_text.strip()
+    if len(stripped) < 150:
+        logger.info(f"Skipping page {page_index+1} (extremely short content, {len(stripped)} chars).")
+        return True
+        
+    lower_text = stripped.lower()
+    
+    # 1. Skip cover page (usually page 1) if it doesn't contain a lot of instructions
+    if page_index == 0 and len(stripped) < 1500 and any(x in lower_text for x in ["repair instruction", "reparaturanleitung", "workshop manual", "service manual"]):
+        logger.info(f"Skipping page {page_index+1} (potential cover page).")
+        return True
+        
+    # 2. Skip Table of Contents / Index pages
+    if any(x in lower_text for x in ["table of contents", "inhaltsverzeichnis", "table des matières", "toc index", "index of contents"]):
+        logger.info(f"Skipping page {page_index+1} (contains Table of Contents / Index).")
+        return True
+        
+    # Also skip if it has a high concentration of page numbering lines (dotted lines like . . . or ....)
+    if lower_text.count("....") > 5 or lower_text.count(". . .") > 5 or lower_text.count("____") > 5:
+        logger.info(f"Skipping page {page_index+1} (potential Table of Contents dot leaders).")
+        return True
+        
+    # 3. Skip generic legal/copyright disclaimer pages
+    if "all rights reserved" in lower_text and len(stripped) < 600:
+        logger.info(f"Skipping page {page_index+1} (contains legal disclaimer boilerplate).")
+        return True
+        
+    return False
+
 def extract_text_from_pdf(pdf_path: str) -> str:
     """Extracts text content from PDF file using PyMuPDF (10x-50x faster than pdfplumber)."""
     text_content = []
     try:
         logger.info("Extracting PDF text using PyMuPDF...")
         doc = fitz.open(pdf_path)
-        for page in doc:
+        total_pages = len(doc)
+        logger.info(f"PDF contains {total_pages} pages.")
+        
+        for i, page in enumerate(doc):
             page_text = page.get_text()
             if page_text:
+                # Apply smart filtering only if the PDF is reasonably large (> 10 pages)
+                if total_pages > 10 and smart_should_skip_page(page_text, i, total_pages):
+                    continue
                 text_content.append(page_text)
+                
         extracted = "\n".join(text_content)
-        logger.info(f"PyMuPDF successfully extracted {len(extracted)} characters.")
+        logger.info(f"PyMuPDF successfully extracted {len(extracted)} characters from {len(text_content)} selected pages.")
         return extracted
     except Exception as e:
         logger.error(f"Error reading PDF with PyMuPDF: {e}. Falling back to pdfplumber...")
         try:
             text_content = []
             with pdfplumber.open(pdf_path) as pdf:
-                for page in pdf.pages:
+                total_pages = len(pdf.pages)
+                for i, page in enumerate(pdf.pages):
                     page_text = page.extract_text()
                     if page_text:
+                        if total_pages > 10 and smart_should_skip_page(page_text, i, total_pages):
+                            continue
                         text_content.append(page_text)
             return "\n".join(text_content)
         except Exception as pe:
@@ -537,8 +584,8 @@ def analyze_with_gemini(text: str, api_key: str, model_name: str = "gemini-2.5-f
     }
 
     try:
-        # Added protective 45-second timeout to prevent hanging on dead or overloaded keys
-        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=45)
+        # Increased timeout to 120 seconds to allow complete processing of large technical manuals
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=120)
         response.raise_for_status()
         result_json = response.json()
         
@@ -579,10 +626,10 @@ def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.3-70b-
             detail="Groq API Key is missing."
         )
 
-    # Smart truncation to respect Groq's 6,000 TPM and context limits on free tier
-    if len(text) > 15000:
-        logger.info(f"Truncating text from {len(text)} to 15000 characters to prevent Groq TPM rate limits.")
-        text = text[:15000] + "\n... [Remaining text truncated to fit rate limits] ..."
+    # Safe-scaled truncation (28,000 chars) to balance context retention and Groq's TPM limits on free tier
+    if len(text) > 28000:
+        logger.info(f"Truncating text from {len(text)} to 28000 characters to prevent Groq TPM rate limits.")
+        text = text[:28000] + "\n... [Remaining text truncated to fit rate limits] ..."
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
@@ -636,7 +683,8 @@ def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.3-70b-
     }
 
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=45)
+        # Increased timeout to 90 seconds to allow Groq fallback to finish processing large texts
+        response = requests.post(url, json=payload, headers=headers, timeout=90)
         response.raise_for_status()
         result_json = response.json()
         
@@ -728,8 +776,8 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
     }
 
     try:
-        # Added protective 45-second timeout to prevent hanging on dead or overloaded keys
-        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=45)
+        # Increased timeout to 150 seconds to allow complete visual OCR of large PDF documents
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=150)
         response.raise_for_status()
         result_json = response.json()
         
@@ -822,39 +870,37 @@ async def analyze_instruction(
         structured_data = None
         last_error = None
 
-        # 4. Try Gemini Provider first (if keys are available)
+        # 4. Try Gemini Provider first (with smart model-then-key pool scheduling)
         gemini_keys = get_all_gemini_api_keys(x_gemini_api_key)
         if gemini_keys:
-            for attempt, api_key in enumerate(gemini_keys):
-                masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
-                logger.info(f"Attempting Gemini analysis using key {attempt + 1}/{len(gemini_keys)} (masked: {masked_key})")
+            # We try the best models in order, but rotate keys first on failures to avoid 429/timeout cascades!
+            models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
+            
+            for model_name in models_to_try:
+                if structured_data:
+                    break
+                logger.info(f"=== Broad Phase: Trying model '{model_name}' across all available keys ===")
                 
-                # Robust model fallback pool to defeat transient 503 high-demand free-tier spikes
-                models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
-                key_succeeded = False
-                
-                for model_name in models_to_try:
+                for attempt, api_key in enumerate(gemini_keys):
+                    masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
+                    logger.info(f"Attempting model '{model_name}' using key {attempt + 1}/{len(gemini_keys)} (masked: {masked_key})")
+                    
                     try:
-                        logger.info(f"Trying Gemini model '{model_name}'...")
                         # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
                         if len(extracted_text.strip()) < 100:
-                            logger.info("pdfplumber extracted very little or no text. Falling back to direct PDF Vision parsing...")
+                            logger.info("Extracted text is empty or too short. Falling back to direct PDF Vision parsing...")
                             structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key, model_name, extracted_text)
                         else:
-                            logger.info(f"Analyzing text with Gemini model '{model_name}' Structured Output API")
+                            logger.info(f"Analyzing text with model '{model_name}' Structured Output API")
                             structured_data = analyze_with_gemini(extracted_text, api_key, model_name)
                         
-                        logger.info(f"Gemini analysis successful using key index {attempt} and model '{model_name}'!")
-                        key_succeeded = True
-                        break # Break out of the model loop since we succeeded!
+                        logger.info(f"Gemini analysis successful using model '{model_name}' and key {attempt + 1}!")
+                        break # Break out of the keys loop since we succeeded!
                     except Exception as e:
-                        logger.warning(f"Gemini model '{model_name}' failed with key {masked_key}: {e}")
+                        logger.warning(f"Model '{model_name}' failed with key {masked_key}: {e}")
                         last_error = e
-                        # Fallback to the next model in the pool for this key
+                        # Continue to the next key for this model
                         continue
-                
-                if key_succeeded:
-                    break # Break out of the keys loop since we succeeded!
 
         # 5. Groq Provider Fallback (if Gemini failed or no Gemini keys configured)
         if not structured_data:
@@ -868,29 +914,26 @@ async def analyze_instruction(
             groq_keys = get_groq_api_keys(x_groq_api_key)
             if groq_keys:
                 logger.info(f"Proceeding with Groq API fallback. Available keys: {len(groq_keys)}")
-                for attempt, api_key in enumerate(groq_keys):
-                    masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
-                    logger.info(f"Attempting Groq analysis using key {attempt + 1}/{len(groq_keys)} (masked: {masked_key})")
+                # We try models in order, rotating keys on failure
+                groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen/qwen3-32b"]
+                
+                for model_name in groq_models:
+                    if structured_data:
+                        break
+                    logger.info(f"=== Groq Phase: Trying model '{model_name}' across all available keys ===")
                     
-                    # Using active models and adding high-TPM models (llama-3.1-8b-instant, qwen/qwen3-32b) 
-                    # as extremely stable fallback models for larger manuals that exceed 70B's 6,000 TPM limit!
-                    groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "qwen/qwen3-32b"]
-                    key_succeeded = False
-                    
-                    for model_name in groq_models:
+                    for attempt, api_key in enumerate(groq_keys):
+                        masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
+                        logger.info(f"Attempting Groq model '{model_name}' using key {attempt + 1}/{len(groq_keys)} (masked: {masked_key})")
+                        
                         try:
-                            logger.info(f"Trying Groq model '{model_name}'...")
                             structured_data = analyze_with_groq(extracted_text, api_key, model_name)
-                            logger.info(f"Groq analysis successful using key index {attempt} and model '{model_name}'!")
-                            key_succeeded = True
-                            break
+                            logger.info(f"Groq analysis successful using model '{model_name}' and key {attempt + 1}!")
+                            break # Break out of the keys loop
                         except Exception as e:
                             logger.warning(f"Groq model '{model_name}' failed with key {masked_key}: {e}")
                             last_error = e
                             continue
-                            
-                    if key_succeeded:
-                        break
 
         if not structured_data:
             logger.error(f"All configured AI providers (Gemini/Groq) failed. Final error: {last_error}")
