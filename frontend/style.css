@@ -2603,6 +2603,14 @@ body.body-rumble {
         gap: 10px !important;
     }
     
+    .summary-card .highlight-val {
+        color: #000000 !important;
+    }
+    
+    .summary-card .card-info h3 {
+        color: #333333 !important;
+    }
+    
     .glassmorphism {
         background: #ffffff !important;
         border: 1px solid #000000 !important;
