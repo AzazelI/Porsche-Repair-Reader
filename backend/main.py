@@ -8,6 +8,7 @@ import base64
 import time
 import re
 from typing import List, Optional
+from pydantic import BaseModel
 from fastapi import FastAPI, UploadFile, File, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
@@ -1181,6 +1182,234 @@ def clear_cache(file_hash: str):
         "local_cleared": local_cleared,
         "supabase_cleared": supabase_cleared
     }
+
+# ==========================================
+# GWEN AI TECHNICAL GLOSSARY CHAT INTELLIGENCE
+# ==========================================
+
+class GwenChatRequest(BaseModel):
+    query: str
+
+GWEN_SYSTEM_INSTRUCTION = (
+    "შენ ხარ Gwen AI (გვენი) — პრემიუმ კლასის, Porsche-ს სერვისის ჭკვიანი ხმოვანი და ტექნიკური ასისტენტი. "
+    "შენი მიზანია დაეხმარო Porsche-ს ავტორიზებულ მექანიკოსებსა და ტექნიკოსებს ავტომობილის დიაგნოსტირებასა და შეკეთებაში.\n\n"
+    
+    "ძირითადი ქცევის წესები:\n"
+    "1. **პერსონაჟი:** ხარ პროფესიონალი, თავაზიანი, ტექნიკურად უზადოდ განათლებული და მეგობრული. საუბრობ დახვეწილი, ოფიციალური დილერის დონის ქართული საინჟინრო ენით.\n"
+    "2. **ლექსიკონი:** შენ გაქვს სრული წვდომა ჩვენს სპეციალურ საავტომობილო ლექსიკონთან (ქართულ-გერმანულ-ინგლისურ-ჟარგონული). როდესაც ტექნიკოსი გეკითხება რაიმე ნაწილზე (მაგალითად, ჟარგონულზე, როგორიცაა 'შარავოი', 'გიტარა', 'სოლდატიკი', 'პრაკლადკა'), შენ უნდა იპოვო ის შენს ლექსიკონში და:\n"
+    "   - განუმარტო მისი ზუსტი დანიშნულება და ფუნქცია.\n"
+    "   - უთხრა მისი ოფიციალური ქართული სახელი (მაგ. 'სფერული საყრდენი') და საერთაშორისო ინგლისური/გერმანული ტერმინები.\n"
+    "   - **კატალოგის სექცია:** მიუთითო, თუ კატალოგის რომელ სექციაში უნდა ეძებოს ეს ნაწილი (მაგ. დაკიდების სისტემა, ძრავი, ტრანსმისია, მუხრუჭები და ა.შ.).\n"
+    "3. **ხმოვანი ფორმატი:** ვინაიდან შენი პასუხი ხმოვნად გაჟღერდება (Text-to-Speech), პასუხები შეინარჩუნე მაქსიმალურად ლაკონიური, კონკრეტული და გასაგები. მოერიდე ზედმეტად გრძელ წინადადებებს, სპეციალურ სიმბოლოებს ან რთულ ცხრილებს პასუხში.\n"
+    "4. **ენობრივი სიზუსტე:** გამოიყენე ქართული ტექნიკური ტერმინოლოგია, მაგრამ ფრჩხილებში მიუთითე საერთაშორისო ინგლისური დასახელება უკეთესი ორიენტაციისთვის."
+)
+
+GEORGIAN_STOP_WORDS = {
+    "არის", "რომელ", "სად", "როგორ", "რას", "რომ", "უნდა", "და", "რა", "ვინ", 
+    "ვერ", "არა", "კი", "თუ", "შენ", "ჩვენ", "თქვენ", "იგი", "ამ", "იმ", 
+    "ეგ", "ეს", "აქ", "იქ", "ასე", "ისე", "შესახებ", "მიერ", "ყველა", 
+    "ახალი", "ძველი", "მეტი", "ნაკლები", "რამდენი", "როდის", "რატომ"
+}
+
+def match_glossary_in_query(query: str) -> dict:
+    """
+    Searches the entire glossary (local + Supabase cached) for any keys or values 
+    matching substrings or words in the user query, ignoring common stop words 
+    and resolving Georgian plurals using prefix overlaps to provide highly relevant context.
+    """
+    # 1. Fetch entire glossary
+    glossary = DEFAULT_GLOSSARY.copy()
+    try:
+        supabase_glossary = fetch_glossary_from_supabase()
+        if supabase_glossary:
+            glossary.update(supabase_glossary)
+    except Exception as e:
+        logger.error(f"Error fetching glossary for Gwen match: {e}")
+        
+    # 2. Tokenize query words
+    query_clean = query.lower()
+    query_words = [w.strip() for w in re.split(r'[^a-z0-9ა-ჰ]', query_clean) if len(w.strip()) >= 3]
+    query_words = [w for w in query_words if w not in GEORGIAN_STOP_WORDS]
+    
+    matched = {}
+    
+    # 3. Match rules
+    for term_en, trans_ka in glossary.items():
+        term_en_lower = term_en.lower()
+        trans_ka_lower = trans_ka.lower()
+        
+        # Cleaned term & translation words in glossary
+        term_en_words = [w.strip() for w in re.split(r'[^a-z0-9]', term_en_lower) if len(w.strip()) >= 3]
+        trans_ka_words = [w.strip() for w in re.split(r'[^ა-ჰ]', trans_ka_lower) if len(w.strip()) >= 3]
+        
+        # Filter glossary terms
+        term_en_words = [w for w in term_en_words if w not in GEORGIAN_STOP_WORDS]
+        trans_ka_words = [w for w in trans_ka_words if w not in GEORGIAN_STOP_WORDS]
+        
+        matched_flag = False
+        for qw in query_words:
+            for gw in trans_ka_words + term_en_words:
+                # Rule A: Check for direct substring match
+                if qw in gw or gw in qw:
+                    matched[term_en] = trans_ka
+                    matched_flag = True
+                    break
+                
+                # Rule B: Check for common prefix to handle Georgian plural suffixes (e.g., კალოდკა / კალოდკები)
+                if len(qw) >= 5 and len(gw) >= 5:
+                    prefix_len = min(len(qw), len(gw)) - 2
+                    if qw[:prefix_len] == gw[:prefix_len]:
+                        matched[term_en] = trans_ka
+                        matched_flag = True
+                        break
+            if matched_flag:
+                break
+                
+    # Cap matching terms to 25 to save tokens and keep prompt dense
+    if len(matched) > 25:
+        sorted_keys = sorted(matched.keys())[:25]
+        matched = {k: matched[k] for k in sorted_keys}
+        
+    logger.info(f"Gwen Glossary Matcher: Found {len(matched)} matching terms for query: '{query}'")
+    return matched
+
+def call_gemini_chat(prompt: str, system_instruction: str, api_key: str, model_name: str = "gemini-2.5-flash") -> str:
+    """Calls Gemini API for text-based conversation."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+    payload = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }],
+        "systemInstruction": {
+            "parts": [{"text": system_instruction}]
+        },
+        "generationConfig": {
+            "temperature": 0.3
+        }
+    }
+    
+    response = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=30)
+    response.raise_for_status()
+    result = response.json()
+    
+    candidates = result.get("candidates", [])
+    if not candidates:
+        raise Exception("No candidates returned from Gemini.")
+    parts = candidates[0].get("content", {}).get("parts", [])
+    if not parts:
+        raise Exception("Empty content parts in Gemini response.")
+    return parts[0].get("text", "")
+
+def call_groq_chat(prompt: str, system_instruction: str, api_key: str, model_name: str = "llama-3.3-70b-versatile") -> str:
+    """Calls Groq API for text-based conversation."""
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.3
+    }
+    
+    response = requests.post(url, json=payload, headers=headers, timeout=30)
+    response.raise_for_status()
+    result = response.json()
+    choices = result.get("choices", [])
+    if not choices:
+        raise Exception("No choices returned from Groq.")
+    return choices[0].get("message", {}).get("content", "")
+
+@app.post("/gwen-chat")
+async def gwen_chat(
+    request: GwenChatRequest,
+    x_gemini_api_key: Optional[str] = Header(None),
+    x_groq_api_key: Optional[str] = Header(None)
+):
+    """
+    Processes chat messages for Gwen AI. Looks up relevant glossary terms 
+    and returns a natural Georgian explanation using the Gemini/Groq dual-provider engine.
+    """
+    query = request.query
+    if not query:
+        raise HTTPException(status_code=400, detail="Query cannot be empty.")
+        
+    logger.info(f"Gwen Chat Request received: '{query}'")
+    
+    # 1. Match technical glossary terms
+    matched_glossary = match_glossary_in_query(query)
+    
+    # 2. Build contextual prompt
+    glossary_context = ""
+    if matched_glossary:
+        glossary_context = "ჩვენს საინჟინრო ლექსიკონში მოიძებნა შემდეგი შესაბამისი ტერმინები:\n"
+        for term_en, trans_ka in matched_glossary.items():
+            glossary_context += f" - '{term_en}' -> '{trans_ka}'\n"
+            
+    prompt = f"ტექნიკოსის შეკითხვა: \"{query}\"\n\n"
+    if glossary_context:
+        prompt += f"{glossary_context}\n"
+    prompt += (
+        "გთხოვთ, უპასუხოთ ტექნიკოსს როგორც Gwen AI, გამოიყენოთ ზემოთ მოცემული ლექსიკონი "
+        "(ასეთის არსებობის შემთხვევაში), განუმარტოთ ნაწილის დანიშნულება და ფუნქცია, მისი ოფიციალური "
+        "სახელწოდება და მიუთითოთ კატალოგის შესაბამისი განყოფილება."
+    )
+    
+    response_text = None
+    last_error = None
+    
+    # 3. Call Gemini Key Pool
+    gemini_keys = get_all_gemini_api_keys(x_gemini_api_key)
+    if gemini_keys:
+        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash"]
+        for model in models_to_try:
+            if response_text:
+                break
+            for attempt, api_key in enumerate(gemini_keys):
+                masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
+                logger.info(f"Trying Gemini model '{model}' for Gwen Chat using key {attempt + 1}/{len(gemini_keys)}")
+                try:
+                    response_text = call_gemini_chat(prompt, GWEN_SYSTEM_INSTRUCTION, api_key, model)
+                    logger.info("Gwen Chat Gemini response successful!")
+                    break
+                except Exception as e:
+                    logger.warning(f"Gwen Chat Gemini model '{model}' failed with key {masked_key}: {e}")
+                    last_error = e
+                    continue
+                    
+    # 4. Call Groq Key Pool Fallback
+    if not response_text:
+        groq_keys = get_groq_api_keys(x_groq_api_key)
+        if groq_keys:
+            groq_models = ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+            for model in groq_models:
+                if response_text:
+                    break
+                for attempt, api_key in enumerate(groq_keys):
+                    masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
+                    logger.info(f"Trying Groq model '{model}' for Gwen Chat using key {attempt + 1}/{len(groq_keys)}")
+                    try:
+                        response_text = call_groq_chat(prompt, GWEN_SYSTEM_INSTRUCTION, api_key, model)
+                        logger.info("Gwen Chat Groq response successful!")
+                        break
+                    except Exception as e:
+                        logger.warning(f"Gwen Chat Groq model '{model}' failed with key {masked_key}: {e}")
+                        last_error = e
+                        continue
+                        
+    if not response_text:
+        logger.error(f"All AI keys exhausted for Gwen Chat. Error: {last_error}")
+        response_text = (
+            "უკაცრავად, კავშირის ხარვეზის (ყველა API გასაღების კვოტა ამოწურულია) გამო ამჟამად "
+            "ვერ ვუკავშირდები ხელოვნური ინტელექტის სერვერს. გთხოვთ, შეამოწმოთ თქვენი პირადი "
+            "Gemini API გასაღები საინჟინრო მენიუში (⚙️) ან სცადოთ მოგვიანებით ხელახლა."
+        )
+        
+    return {"response": response_text}
 
 if __name__ == "__main__":
     import uvicorn

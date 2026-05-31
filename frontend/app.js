@@ -1339,19 +1339,48 @@ document.addEventListener("DOMContentLoaded", () => {
     function speakText(text) {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(text);
-            const voices = window.speechSynthesis.getVoices();
-            const geVoice = voices.find(v => v.lang.includes("ka") || v.lang.includes("GE"));
             
-            if (geVoice) {
-                utterance.voice = geVoice;
-                utterance.lang = "ka-GE";
+            // Clean markdown and HTML tags for a clean text readout
+            let speechString = text
+                .replace(/\*\*/g, '')
+                .replace(/\*/g, '')
+                .replace(/<[^>]*>/g, '')
+                .replace(/-\s+/g, '');
+                
+            const utterance = new SpeechSynthesisUtterance(speechString);
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Try to find a pleasant Female Georgian voice first
+            let targetVoice = voices.find(v => (v.lang.includes("ka") || v.lang.includes("GE")) && 
+                                              (v.name.toLowerCase().includes("female") || 
+                                               v.name.toLowerCase().includes("girl") || 
+                                               v.name.toLowerCase().includes("zira") || 
+                                               v.name.toLowerCase().includes("google") || 
+                                               v.name.toLowerCase().includes("natural")));
+            
+            // Fallback to any Georgian voice
+            if (!targetVoice) {
+                targetVoice = voices.find(v => v.lang.includes("ka") || v.lang.includes("GE"));
+            }
+            
+            // If no Georgian voice is found, search for a high-quality female English voice (e.g. Zira, Susan, Hazel, Google)
+            if (!targetVoice) {
+                targetVoice = voices.find(v => (v.name.toLowerCase().includes("female") || 
+                                               v.name.toLowerCase().includes("google") || 
+                                               v.name.toLowerCase().includes("zira") || 
+                                               v.name.toLowerCase().includes("susan") || 
+                                               v.name.toLowerCase().includes("hazel")) && v.lang.includes("en"));
+            }
+            
+            if (targetVoice) {
+                utterance.voice = targetVoice;
+                utterance.lang = targetVoice.lang;
             } else {
                 utterance.lang = "ka-GE";
             }
             
             utterance.rate = 1.05;
-            utterance.pitch = 1.0;
+            utterance.pitch = 1.05; // Slightly higher pitch for a bright, pleasant female voice
             window.speechSynthesis.speak(utterance);
         }
     }
@@ -1577,16 +1606,72 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         
-        // Command 6: Greeting/Test
-        else if (command.includes("gwen") || command.includes("გვენ") || command.includes("პივის") || command.includes("ჰელოუ") || command.includes("hello")) {
+        // Command 6: Simple Greeting/Test (only matches short, non-question greetings)
+        else if ((command === "gwen" || command === "გვენ" || command === "პივის" || command === "ჰელოუ" || command === "hello" || command === "გამარჯობა" || command.includes("გამარჯობა გვენ") || command === "gwen ai" || command === "გვენ ეიაი") && 
+                 !command.includes("?") && 
+                 !command.includes("რა") && !command.includes("სად") && !command.includes("როგორ") && !command.includes("რატომ")) {
             appendChatMessage("Gwen AI", "გისმენთ! მე ვარ **Gwen AI**, თქვენი კოკპიტის ასისტენტი. შემიძლია ჩავტვირთო სარემონტო ინსტრუქციები, წავიკითხო ნაბიჯები და დაჭერის ძალები.");
             speakText("გისმენთ! მე ვარ გვენ ეიაი, თქვენი კოკპიტის ასისტენტი. შემიძლია წავიკითხო სარემონტო ნაბიჯები და დაჭერის ძალები.");
         }
         
-        // Unrecognized text entry: fallback AI chat bubble
+        // Unrecognized text entry: real-time Gwen AI Chat with technical glossary matching!
         else {
-            appendChatMessage("Gwen AI", "მე შემიძლია დაგეხმაროთ R1200GS, 911 GT3, Cayenne ან Taycan-ის სარემონტო სამუშაოებში. მკითხეთ ნებისმიერი რამ, ან მითხარით: „ახსენი r1200gs ზეთის შეცვლა“.");
-            speakText("რითი შემიძლია დაგეხმაროთ?");
+            // 1. Append loading / thinking bubble to the chat history
+            const gwenHistory = document.getElementById("gwen-chat-history");
+            const loadingBubble = document.createElement("div");
+            loadingBubble.className = "chat-message gwen thinking-bubble";
+            loadingBubble.innerHTML = `
+                <span class="chat-sender">Gwen AI</span>
+                <p class="chat-text"><i class="fa-solid fa-circle-notch fa-spin"></i> <em>ფიქრობს...</em></p>
+            `;
+            if (gwenHistory) {
+                gwenHistory.appendChild(loadingBubble);
+                gwenHistory.scrollTop = gwenHistory.scrollHeight;
+            }
+            
+            // Prepare request headers with optional API Key from settings modal
+            const headers = {
+                "Content-Type": "application/json"
+            };
+            if (savedApiKey) {
+                headers["X-Gemini-API-Key"] = savedApiKey;
+            }
+            
+            // Call `/gwen-chat` backend route
+            fetch(`${savedApiUrl}/gwen-chat`, {
+                method: "POST",
+                headers: headers,
+                body: JSON.stringify({ query: command })
+            })
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error("ქსელის ხარვეზი");
+                }
+                return res.json();
+            })
+            .then(data => {
+                // Remove loading bubble
+                if (loadingBubble && loadingBubble.parentNode) {
+                    loadingBubble.parentNode.removeChild(loadingBubble);
+                }
+                
+                const responseText = data.response || "უკაცრავად, პასუხის მიღება ვერ მოხერხდა.";
+                
+                // Append real reply and trigger female voice synthesis
+                appendChatMessage("Gwen AI", responseText);
+                speakText(responseText);
+            })
+            .catch(err => {
+                console.error("Gwen chat error:", err);
+                // Clean up thinking bubble
+                if (loadingBubble && loadingBubble.parentNode) {
+                    loadingBubble.parentNode.removeChild(loadingBubble);
+                }
+                
+                const errorResponse = "უკაცრავად, სერვერთან კავშირი დროებით გაწყდა. გთხოვთ შეამოწმოთ ინტერნეტი ან სცადოთ მოგვიანებით.";
+                appendChatMessage("Gwen AI", errorResponse);
+                speakText(errorResponse);
+            });
         }
     }
     
