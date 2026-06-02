@@ -1343,13 +1343,46 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if (window.gwenTranslationAudio) {
                 window.gwenTranslationAudio.pause();
+                window.gwenTranslationAudio = null;
             }
-            const encodedText = encodeURIComponent(text);
-            const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ka&client=tw-ob&q=${encodedText}`;
-            window.gwenTranslationAudio = new Audio(url);
-            window.gwenTranslationAudio.play().catch(err => {
-                console.warn("Translate TTS Fallback playback failed:", err);
-            });
+            
+            // Split text into safe chunks of ~150 characters to avoid Google Translate TTS truncation
+            const chunks = [];
+            const words = text.split(/\s+/);
+            let currentChunk = "";
+            
+            for (let word of words) {
+                if ((currentChunk + " " + word).length > 150) {
+                    chunks.push(currentChunk.trim());
+                    currentChunk = word;
+                } else {
+                    currentChunk += " " + word;
+                }
+            }
+            if (currentChunk.trim()) {
+                chunks.push(currentChunk.trim());
+            }
+            
+            let chunkIndex = 0;
+            function playNextChunk() {
+                if (chunkIndex >= chunks.length) return;
+                
+                const encodedText = encodeURIComponent(chunks[chunkIndex]);
+                const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ka&client=tw-ob&q=${encodedText}`;
+                
+                window.gwenTranslationAudio = new Audio(url);
+                window.gwenTranslationAudio.onended = () => {
+                    chunkIndex++;
+                    playNextChunk();
+                };
+                window.gwenTranslationAudio.play().catch(err => {
+                    console.warn("Translate TTS chunk playback failed:", err);
+                });
+            }
+            
+            if (chunks.length > 0) {
+                playNextChunk();
+            }
         } catch (e) {
             console.error("Google TTS playback error:", e);
         }
@@ -1371,8 +1404,14 @@ document.addEventListener("DOMContentLoaded", () => {
         window.speechSynthesis.cancel();
         const voices = window.speechSynthesis.getVoices();
         
+        // Strict function to match only real Georgian voices (ka, ka-GE, kat)
+        const isGeorgianVoice = (v) => {
+            const lang = v.lang.toLowerCase();
+            return lang === 'ka' || lang === 'ka-ge' || lang.startsWith('ka-') || lang === 'kat';
+        };
+        
         // Try to find a pleasant Female Georgian voice first
-        let targetVoice = voices.find(v => (v.lang.toLowerCase().includes("ka") || v.lang.toLowerCase().includes("ge")) && 
+        let targetVoice = voices.find(v => isGeorgianVoice(v) && 
                                           (v.name.toLowerCase().includes("female") || 
                                            v.name.toLowerCase().includes("girl") || 
                                            v.name.toLowerCase().includes("zira") || 
@@ -1381,7 +1420,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Fallback to any Georgian voice
         if (!targetVoice) {
-            targetVoice = voices.find(v => v.lang.toLowerCase().includes("ka") || v.lang.toLowerCase().includes("ge"));
+            targetVoice = voices.find(v => isGeorgianVoice(v));
         }
         
         if (targetVoice) {
@@ -1392,7 +1431,7 @@ document.addEventListener("DOMContentLoaded", () => {
             utterance.pitch = 1.05; // Slightly higher pitch for a bright, pleasant female voice
             window.speechSynthesis.speak(utterance);
         } else {
-            // If no local Georgian voice is found, use the 100% free Google Translate fallback
+            // If no real local Georgian voice is found, fall back to Google Translate TTS
             console.log("No local Georgian voice found. Falling back to Google Translate TTS.");
             playGoogleTTS(speechString);
         }
