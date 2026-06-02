@@ -1336,65 +1336,52 @@ document.addEventListener("DOMContentLoaded", () => {
         gwenChatHistory.scrollTop = gwenChatHistory.scrollHeight;
     }
     
-    function playGoogleTTS(text) {
-        try {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
-            if (window.gwenTranslationAudio) {
-                window.gwenTranslationAudio.pause();
-            }
-            const encodedText = encodeURIComponent(text);
-            const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=ka&client=tw-ob&q=${encodedText}`;
-            window.gwenTranslationAudio = new Audio(url);
-            window.gwenTranslationAudio.play().catch(err => {
-                console.warn("Translate TTS Fallback playback failed:", err);
-            });
-        } catch (e) {
-            console.error("Google TTS playback error:", e);
-        }
-    }
-    
     function speakText(text) {
-        // Clean markdown and HTML tags for a clean text readout
-        let speechString = text
-            .replace(/\*\*/g, '')
-            .replace(/\*/g, '')
-            .replace(/<[^>]*>/g, '')
-            .replace(/-\s+/g, '');
-
-        if (!('speechSynthesis' in window)) {
-            playGoogleTTS(speechString);
-            return;
-        }
-
-        window.speechSynthesis.cancel();
-        const voices = window.speechSynthesis.getVoices();
-        
-        // Try to find a pleasant Female Georgian voice first
-        let targetVoice = voices.find(v => (v.lang.toLowerCase().includes("ka") || v.lang.toLowerCase().includes("ge")) && 
-                                          (v.name.toLowerCase().includes("female") || 
-                                           v.name.toLowerCase().includes("girl") || 
-                                           v.name.toLowerCase().includes("zira") || 
-                                           v.name.toLowerCase().includes("google") || 
-                                           v.name.toLowerCase().includes("natural")));
-        
-        // Fallback to any Georgian voice
-        if (!targetVoice) {
-            targetVoice = voices.find(v => v.lang.toLowerCase().includes("ka") || v.lang.toLowerCase().includes("ge"));
-        }
-        
-        if (targetVoice) {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            
+            // Clean markdown and HTML tags for a clean text readout
+            let speechString = text
+                .replace(/\*\*/g, '')
+                .replace(/\*/g, '')
+                .replace(/<[^>]*>/g, '')
+                .replace(/-\s+/g, '');
+                
             const utterance = new SpeechSynthesisUtterance(speechString);
-            utterance.voice = targetVoice;
-            utterance.lang = targetVoice.lang;
+            const voices = window.speechSynthesis.getVoices();
+            
+            // Try to find a pleasant Female Georgian voice first
+            let targetVoice = voices.find(v => (v.lang.includes("ka") || v.lang.includes("GE")) && 
+                                              (v.name.toLowerCase().includes("female") || 
+                                               v.name.toLowerCase().includes("girl") || 
+                                               v.name.toLowerCase().includes("zira") || 
+                                               v.name.toLowerCase().includes("google") || 
+                                               v.name.toLowerCase().includes("natural")));
+            
+            // Fallback to any Georgian voice
+            if (!targetVoice) {
+                targetVoice = voices.find(v => v.lang.includes("ka") || v.lang.includes("GE"));
+            }
+            
+            // If no Georgian voice is found, search for a high-quality female English voice (e.g. Zira, Susan, Hazel, Google)
+            if (!targetVoice) {
+                targetVoice = voices.find(v => (v.name.toLowerCase().includes("female") || 
+                                               v.name.toLowerCase().includes("google") || 
+                                               v.name.toLowerCase().includes("zira") || 
+                                               v.name.toLowerCase().includes("susan") || 
+                                               v.name.toLowerCase().includes("hazel")) && v.lang.includes("en"));
+            }
+            
+            if (targetVoice) {
+                utterance.voice = targetVoice;
+                utterance.lang = targetVoice.lang;
+            } else {
+                utterance.lang = "ka-GE";
+            }
+            
             utterance.rate = 1.05;
             utterance.pitch = 1.05; // Slightly higher pitch for a bright, pleasant female voice
             window.speechSynthesis.speak(utterance);
-        } else {
-            // If no local Georgian voice is found, use the 100% free Google Translate fallback
-            console.log("No local Georgian voice found. Falling back to Google Translate TTS.");
-            playGoogleTTS(speechString);
         }
     }
     
@@ -1738,9 +1725,6 @@ document.addEventListener("DOMContentLoaded", () => {
     
     if ('speechSynthesis' in window) {
         window.speechSynthesis.getVoices();
-        window.speechSynthesis.onvoiceschanged = () => {
-            window.speechSynthesis.getVoices();
-        };
     }
 });
 
