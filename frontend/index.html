@@ -82,6 +82,23 @@
                         <input type="text" id="api-url-input" placeholder="http://localhost:8000" />
                         <span class="settings-help">ლოკალური სერვერისთვის: http://localhost:8000, ონლაინ ვერსიისთვის: Render-ის მისამართი.</span>
                     </div>
+
+                    <div class="settings-field" style="margin-top: 15px;">
+                        <label for="ollama-url-input"><i class="fa-solid fa-network-wired"></i> Ollama Host URL (Local Edge AI):</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" id="ollama-url-input" placeholder="http://localhost:11434" style="flex: 1;" />
+                            <button id="btn-test-ollama" class="btn-secondary" style="padding: 10px 15px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer; display: flex; align-items: center; gap: 5px;"><i class="fa-solid fa-plug"></i> ტესტირება</button>
+                        </div>
+                        <span class="settings-help">ლოკალურად გაშვებული Ollama-ს მისამართი.</span>
+                    </div>
+
+                    <div class="settings-field" style="margin-top: 15px;">
+                        <label for="ollama-model-select"><i class="fa-solid fa-brain"></i> Ollama Model:</label>
+                        <select id="ollama-model-select" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; cursor: pointer;">
+                            <option value="">(გააკეთეთ ტესტირება მოდელების ჩასატვირთად)</option>
+                        </select>
+                        <span id="ollama-status-msg" class="settings-help" style="color: #00cc66; display: none;"></span>
+                    </div>
                     
                     <div class="modal-actions" style="margin-top: 20px; text-align: right;">
                         <button id="settings-save" class="btn-primary"><i class="fa-solid fa-save"></i> შენახვა</button>

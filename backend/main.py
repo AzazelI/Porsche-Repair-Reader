@@ -937,11 +937,12 @@ async def analyze_instruction(
                             continue
 
         if not structured_data:
-            logger.error(f"All configured AI providers (Gemini/Groq) failed. Final error: {last_error}")
-            raise HTTPException(
-                status_code=502,
-                detail=f"All configured AI providers failed. Final error: {str(last_error)}"
-            )
+            logger.warning("All configured cloud AI providers (Gemini/Groq) failed. Initiating client-side local Ollama fallback...")
+            return {
+                "status": "fallback_to_local",
+                "file_hash": file_hash,
+                "extracted_text": extracted_text
+            }
         
         # 6. Save successful response to local cache and persistent Supabase Storage cache
         try:
@@ -1190,6 +1191,10 @@ def clear_cache(file_hash: str):
 class GwenChatRequest(BaseModel):
     query: str
 
+class CacheLocalRequest(BaseModel):
+    file_hash: str
+    structured_data: dict
+
 GWEN_SYSTEM_INSTRUCTION = (
     "შენ ხარ Gwen AI (გვენი) — პრემიუმ კლასის, Porsche-ს სერვისის ჭკვიანი ხმოვანი და ტექნიკური ასისტენტი. "
     "შენი მიზანია დაეხმარო Porsche-ს ავტორიზებულ მექანიკოსებსა და ტექნიკოსებს ავტომობილის დიაგნოსტირებასა და შეკეთებაში.\n\n"
@@ -1402,14 +1407,38 @@ async def gwen_chat(
                         continue
                         
     if not response_text:
-        logger.error(f"All AI keys exhausted for Gwen Chat. Error: {last_error}")
-        response_text = (
-            "უკაცრავად, კავშირის ხარვეზის (ყველა API გასაღების კვოტა ამოწურულია) გამო ამჟამად "
-            "ვერ ვუკავშირდები ხელოვნური ინტელექტის სერვერს. გთხოვთ, შეამოწმოთ თქვენი პირადი "
-            "Gemini API გასაღები საინჟინრო მენიუში (⚙️) ან სცადოთ მოგვიანებით ხელახლა."
-        )
+        logger.warning("All cloud AI keys exhausted for Gwen Chat. Initiating client-side local Ollama fallback...")
+        return {
+            "status": "fallback_to_local",
+            "prompt": prompt
+        }
         
     return {"response": response_text}
+
+@app.post("/cache-local-analysis")
+async def cache_local_analysis(request: CacheLocalRequest):
+    """
+    Caches a successfully generated local Ollama analysis on the backend 
+    for future caching hits (local and Supabase).
+    """
+    file_hash = request.file_hash
+    structured_data = request.structured_data
+    
+    cache_dir = "cache"
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file = os.path.join(cache_dir, f"{file_hash}.json")
+    
+    try:
+        with open(cache_file, "w", encoding="utf-8") as f:
+            json.dump(structured_data, f, ensure_ascii=False, indent=2)
+        logger.info(f"Saved local fallback analysis to local cache: {cache_file}")
+        
+        # Upload to persistent Supabase Storage cache!
+        upload_cached_analysis_to_supabase(file_hash, structured_data)
+        return {"status": "cached"}
+    except Exception as e:
+        logger.error(f"Failed to write fallback response to cache: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to cache: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

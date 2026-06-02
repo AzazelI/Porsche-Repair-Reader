@@ -24,6 +24,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const settingsSave = document.getElementById("settings-save");
     const logoPorsche = document.getElementById("logo-porsche");
     
+    // Ollama Config Nodes
+    const ollamaUrlInput = document.getElementById("ollama-url-input");
+    const btnTestOllama = document.getElementById("btn-test-ollama");
+    const ollamaModelSelect = document.getElementById("ollama-model-select");
+    const ollamaStatusMsg = document.getElementById("ollama-status-msg");
+    
     // Loading/Speedometer Elements
     const speedoProgress = document.getElementById("speedo-progress");
     const speedoValue = document.getElementById("speedo-value");
@@ -59,6 +65,24 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.setItem("backend_api_url", DEFAULT_API_URL);
     }
     apiUrlInput.value = savedApiUrl;
+
+    const DEFAULT_OLLAMA_URL = "http://localhost:11434";
+    let savedOllamaUrl = localStorage.getItem("ollama_host_url") || DEFAULT_OLLAMA_URL;
+    let savedOllamaModel = localStorage.getItem("ollama_model_name") || "";
+
+    if (ollamaUrlInput) {
+        ollamaUrlInput.value = savedOllamaUrl;
+    }
+    
+    // Pre-populate Ollama model list from localStorage if it exists
+    if (savedOllamaModel && ollamaModelSelect) {
+        ollamaModelSelect.innerHTML = "";
+        const opt = document.createElement("option");
+        opt.value = savedOllamaModel;
+        opt.textContent = savedOllamaModel;
+        opt.selected = true;
+        ollamaModelSelect.appendChild(opt);
+    }
 
     // Driving Mode Selector (Normal / Sport / Track / Launch Themes)
     const modeButtons = document.querySelectorAll(".btn-mode");
@@ -139,6 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Toggle Settings Modal
     settingsToggle.addEventListener("click", () => {
         settingsModal.classList.remove("hidden");
+        // Silently run connection check to pull model list if Ollama is running
+        testOllamaConnection(true);
     });
 
     settingsClose.addEventListener("click", () => {
@@ -167,10 +193,273 @@ document.addEventListener("DOMContentLoaded", () => {
         
         localStorage.setItem("backend_api_url", url);
         savedApiUrl = url;
+
+        // Ollama local settings save
+        if (ollamaUrlInput) {
+            const ollamaUrl = ollamaUrlInput.value.trim() || DEFAULT_OLLAMA_URL;
+            localStorage.setItem("ollama_host_url", ollamaUrl);
+            savedOllamaUrl = ollamaUrl;
+        }
+        if (ollamaModelSelect) {
+            const ollamaModel = ollamaModelSelect.value;
+            if (ollamaModel) {
+                localStorage.setItem("ollama_model_name", ollamaModel);
+                savedOllamaModel = ollamaModel;
+            } else {
+                localStorage.removeItem("ollama_model_name");
+                savedOllamaModel = "";
+            }
+        }
         
         alert("პარამეტრები წარმატებით შეინახა!");
         settingsModal.classList.add("hidden");
     });
+
+    // Test Connection Button Action
+    if (btnTestOllama) {
+        btnTestOllama.addEventListener("click", (e) => {
+            e.preventDefault();
+            testOllamaConnection(false);
+        });
+    }
+
+    async function testOllamaConnection(silent = false) {
+        const host = (ollamaUrlInput ? ollamaUrlInput.value.trim() : "") || DEFAULT_OLLAMA_URL;
+        if (ollamaStatusMsg) {
+            ollamaStatusMsg.style.display = "block";
+            ollamaStatusMsg.style.color = "#ffaa00";
+            ollamaStatusMsg.textContent = "კავშირი მყარდება...";
+        }
+        try {
+            // Fetch list of local models from local Ollama
+            const res = await fetch(`${host}/api/tags`, { method: "GET" });
+            if (!res.ok) throw new Error("სერვერმა დააბრუნა შეცდომა");
+            const data = await res.json();
+            const models = data.models || [];
+            
+            if (ollamaModelSelect) {
+                ollamaModelSelect.innerHTML = "";
+                if (models.length === 0) {
+                    const opt = document.createElement("option");
+                    opt.value = "";
+                    opt.textContent = "მოდელები არ არის ჩამოტვირთული (გაუშვით 'ollama pull')";
+                    ollamaModelSelect.appendChild(opt);
+                } else {
+                    models.forEach(m => {
+                        const opt = document.createElement("option");
+                        opt.value = m.name;
+                        opt.textContent = m.name;
+                        if (m.name === savedOllamaModel) {
+                            opt.selected = true;
+                        }
+                        ollamaModelSelect.appendChild(opt);
+                    });
+                }
+            }
+            if (ollamaStatusMsg) {
+                ollamaStatusMsg.style.color = "#00cc66";
+                ollamaStatusMsg.textContent = `კავშირი წარმატებით დამყარდა! ნაპოვნია ${models.length} მოდელი.`;
+            }
+            if (!silent) alert("კავშირი წარმატებით დამყარდა!");
+            return true;
+        } catch (e) {
+            console.error("Ollama connection test failed:", e);
+            if (ollamaStatusMsg) {
+                ollamaStatusMsg.style.color = "#d5001c";
+                ollamaStatusMsg.textContent = "კავშირი ვერ დამყარდა. დარწმუნდით, რომ Ollama გაშვებულია და CORS ჩართულია.";
+            }
+            if (!silent) alert("კავშირის ტესტირება ჩავარდა! დარწმუნდით, რომ გაშვებულია Ollama და ჩართულია CORS (OLLAMA_ORIGINS='*').");
+            return false;
+        }
+    }
+
+    const GEMINI_SCHEMA = {
+      type: "object",
+      properties: {
+        title_en: { type: "string" },
+        title_ka: { type: "string" },
+        model_name: { type: "string" },
+        labor_time: { type: "string" },
+        key_details_en: { type: "array", items: { type: "string" } },
+        key_details_ka: { type: "array", items: { type: "string" } },
+        parts: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              part_number: { type: "string" },
+              description_en: { type: "string" },
+              description_ka: { type: "string" },
+              status: { type: "string" }
+            },
+            required: ["part_number", "description_en", "description_ka", "status"]
+          }
+        },
+        steps: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              step_number: { type: "integer" },
+              description_en: { type: "string" },
+              description_ka: { type: "string" },
+              warning_en: { type: "string" },
+              warning_ka: { type: "string" }
+            },
+            required: ["step_number", "description_en", "description_ka"]
+          }
+        },
+        special_tools: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              tool_number: { type: "string" },
+              name_en: { type: "string" },
+              name_ka: { type: "string" }
+            },
+            required: ["tool_number", "name_en", "name_ka"]
+          }
+        }
+      },
+      required: ["title_en", "title_ka", "model_name", "labor_time", "parts", "steps", "special_tools"]
+    };
+
+    const GWEN_SYSTEM_INSTRUCTION_FRONTEND = 
+        "შენ ხარ Gwen AI (გვენი) — პრემიუმ კლასის, Porsche-ს სერვისის ჭკვიანი ხმოვანი და ტექნიკური ასისტენტი. " +
+        "შენი მიზანია დაეხმარო Porsche-ს ავტორიზებულ მექანიკოსებსა და ტექნიკოსებს ავტომობილის დიაგნოსტირებასა და შეკეთებაში.\n\n" +
+        "ძირითადი ქცევის წესები:\n" +
+        "1. **პერსონაჟი:** ხარ პროფესიონალი, თავაზიანი, ტექნიკურად უზადოდ განათლებული და მეგობრული. საუბრობ დახვეწილი, ოფიციალური დილერის დონის ქართული საინჟინრო ენით.\n" +
+        "2. **ლექსიკონი:** როდესაც ტექნიკოსი გეკითხება რაიმე ნაწილზე, განუმარტე მისი დანიშნულება, ოფიციალური ქართული სახელი და კატალოგის სექცია.\n" +
+        "3. **ხმოვანი ფორმატი:** ვინაიდან შენი პასუხი ხმოვნად გაჟღერდება, პასუხები შეინარჩუნე მაქსიმალურად ლაკონიური და გასაგები. მოერიდე სპეციალურ სიმბოლოებს.";
+
+    async function processLocalOllamaAnalysis(extracted_text, file_hash) {
+        console.warn("FastAPI backend triggered fallback. Executing local Ollama structured analysis on client browser...");
+        loadingStatusText.textContent = "ღრუბლოვანი API მიუწვდომელია. გააქტიურდა ლოკალური Ollama (Edge AI) ანალიზი...";
+        
+        const host = savedOllamaUrl || DEFAULT_OLLAMA_URL;
+        const model = savedOllamaModel || "llama3";
+        
+        if (!model) {
+            throw new Error("ლოკალური Ollama მოდელი არ არის შერჩეული. გთხოვთ, შეხვიდეთ პარამეტრებში (⚙️) და აირჩიოთ მოდელი.");
+        }
+        
+        let text = extracted_text;
+        if (text.length > 20000) {
+            text = text.substring(0, 20000) + "\n... [Truncated to fit local context] ...";
+        }
+        
+        const prompt = `You are an expert Master Service Technician and technical translator for Porsche and BMW Group.
+Analyze the following repair instruction text, extract all key information, and return a highly structured JSON response in the specified schema.
+
+JSON SCHEMA:
+${JSON.stringify(GEMINI_SCHEMA, null, 2)}
+
+Instructions:
+1. Identify title (EN and translation in Georgian).
+2. Identify specific vehicle/motorcycle model name (e.g. 'R 1300 GS', '911 Carrera S'). If not found, use 'Unknown Model'.
+3. Format labor time strictly as 'X FRU'.
+4. For parts without numbers, set part_number to 'N/A'.
+5. Sequence step-by-step repair instruction steps focusing strictly on physical mechanical work (Disassembly, Main work, Reassembly). Keep timeline logical and focused (10-20 steps max). Translate using Georgian dealer-level automotive terminology.
+6. Extract safety warnings or torque specs.
+7. Extract special tools.
+
+Repair Instruction Text:
+${text}`;
+
+        const payload = {
+            model: model,
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a precise technical translator. You must return valid JSON matching the requested schema."
+                },
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            stream: false,
+            format: GEMINI_SCHEMA,
+            options: {
+                temperature: 0.1
+            }
+        };
+
+        const ollamaRes = await fetch(`${host}/api/chat`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!ollamaRes.ok) {
+            throw new Error(`ლოკალურმა Ollama სერვერმა დააბრუნა შეცდომა: ${ollamaRes.statusText}`);
+        }
+
+        const ollamaData = await ollamaRes.json();
+        const content = ollamaData.message.content;
+        let parsedJSON = JSON.parse(content.trim());
+        
+        parsedJSON.model_name = `${model} (Local Edge AI)`;
+        
+        // Cache this result back to backend so future uploads hit cache immediately!
+        try {
+            fetch(`${savedApiUrl}/cache-local-analysis`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ file_hash: file_hash, structured_data: parsedJSON })
+            });
+        } catch (cacheErr) {
+            console.error("Failed to cache local analysis to backend:", cacheErr);
+        }
+        
+        return parsedJSON;
+    }
+
+    async function callLocalOllamaChat(prompt) {
+        console.warn("FastAPI backend triggered Gwen Chat fallback. Executing local Ollama chat on client browser...");
+        const host = savedOllamaUrl || DEFAULT_OLLAMA_URL;
+        const model = savedOllamaModel || "llama3";
+        
+        if (!model) {
+            return "უკაცრავად, ლოკალური Ollama მოდელი არ არის შერჩეული. გთხოვთ, შეხვიდეთ პარამეტრებში (⚙️) და აირჩიოთ მოდელი.";
+        }
+
+        const payload = {
+            model: model,
+            messages: [
+                {
+                    role: "system",
+                    content: GWEN_SYSTEM_INSTRUCTION_FRONTEND
+                },
+                {
+                    role: "user",
+                    content: prompt
+                }
+            ],
+            stream: false,
+            options: {
+                temperature: 0.3
+            }
+        };
+
+        const response = await fetch(`${host}/api/chat`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`ლოკალურმა Ollama-მ დააბრუნა შეცდომა: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data.message.content;
+    }
 
     // ==========================================
     // DRAG AND DROP FILE HANDLERS
@@ -345,6 +634,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 return response.json().then(err => { throw new Error(err.detail || "API Error"); });
             }
             return response.json();
+        })
+        .then(data => {
+            if (data && data.status === "fallback_to_local") {
+                return processLocalOllamaAnalysis(data.extracted_text, data.file_hash);
+            }
+            return data;
         })
         .then(data => {
             // Success: fill dial to max
@@ -1650,12 +1945,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 return res.json();
             })
             .then(data => {
+                if (data && data.status === "fallback_to_local") {
+                    return callLocalOllamaChat(data.prompt);
+                }
+                return data.response || "უკაცრავად, პასუხის მიღება ვერ მოხერხდა.";
+            })
+            .then(responseText => {
                 // Remove loading bubble
                 if (loadingBubble && loadingBubble.parentNode) {
                     loadingBubble.parentNode.removeChild(loadingBubble);
                 }
-                
-                const responseText = data.response || "უკაცრავად, პასუხის მიღება ვერ მოხერხდა.";
                 
                 // Append real reply and trigger female voice synthesis
                 appendChatMessage("Gwen AI", responseText);
