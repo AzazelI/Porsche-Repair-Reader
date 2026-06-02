@@ -42,6 +42,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const resTotalTools = document.getElementById("res-total-tools");
     const resTitleKa = document.getElementById("res-title-ka");
     const resTitleEn = document.getElementById("res-title-en");
+    const resVehicleModel = document.getElementById("res-vehicle-model");
+    const resAiEngine = document.getElementById("res-ai-engine");
     
     const stepsContainer = document.getElementById("steps-container");
     const partsContainer = document.getElementById("parts-container");
@@ -701,6 +703,25 @@ ${text}`;
         // Set Titles
         resTitleKa.textContent = data.title_ka || "სარემონტო ინსტრუქცია";
         resTitleEn.textContent = `Original: ${data.title_en || "N/A"}`;
+
+        // Set Vehicle Model and AI Engine
+        if (resVehicleModel) {
+            resVehicleModel.innerHTML = `<i class="fa-solid fa-car"></i> მოდელი: <strong>${data.model_name || "Unknown Model"}</strong>`;
+        }
+        if (resAiEngine) {
+            const isLocal = data.model_name && data.model_name.includes("Local Edge AI");
+            const engineName = isLocal ? data.model_name : "Cloud Gemini/Groq";
+            resAiEngine.innerHTML = `<i class="fa-solid fa-robot"></i> Engine: ${engineName}`;
+            if (isLocal) {
+                resAiEngine.style.background = "rgba(0, 204, 102, 0.1)";
+                resAiEngine.style.borderColor = "rgba(0, 204, 102, 0.3)";
+                resAiEngine.style.color = "#00ff7f";
+            } else {
+                resAiEngine.style.background = "rgba(213, 0, 28, 0.1)";
+                resAiEngine.style.borderColor = "rgba(213, 0, 28, 0.3)";
+                resAiEngine.style.color = "#ff334b";
+            }
+        }
 
         // 1. Render Step-by-Step Timeline
         stepsContainer.innerHTML = "";
