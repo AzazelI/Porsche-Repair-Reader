@@ -1115,3 +1115,17 @@ GLOSSARY_1000 = {
     "sme": "ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)",
     "SME": "ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)",
 }
+
+# --------------------------------------------------------------------------
+# DYNAMICALLY MERGE EXPANDED GLOSSARY PARTS (1000+ New Terms)
+# --------------------------------------------------------------------------
+from glossary_part2 import GLOSSARY_PART2
+from glossary_part3 import GLOSSARY_PART3
+from glossary_part4 import GLOSSARY_PART4
+from glossary_part5 import GLOSSARY_PART5
+
+GLOSSARY_1000.update(GLOSSARY_PART2)
+GLOSSARY_1000.update(GLOSSARY_PART3)
+GLOSSARY_1000.update(GLOSSARY_PART4)
+GLOSSARY_1000.update(GLOSSARY_PART5)
+

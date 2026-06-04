@@ -58,7 +58,7 @@ def startup_event():
     supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
     if supabase_url and supabase_key:
         try:
-            logger.info("Attempting to auto-seed 'SME' term to Supabase database...")
+            logger.info("Attempting to auto-seed technical glossary to Supabase database...")
             headers = {
                 "Authorization": f"Bearer {supabase_key}",
                 "apikey": supabase_key,
@@ -66,14 +66,27 @@ def startup_event():
                 "Prefer": "resolution=merge-duplicates"
             }
             url = f"{supabase_url.rstrip('/')}/rest/v1/technical_glossary"
-            payload = [
-                {"term_en": "sme", "translation_ka": "ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)"},
-                {"term_en": "SME", "translation_ka": "ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)"}
-            ]
-            res = requests.post(url, json=payload, headers=headers, timeout=10)
-            logger.info(f"Supabase glossary seed response status: {res.status_code}")
+            
+            # Prepare all items from GLOSSARY_1000
+            all_items = []
+            for term, translation in GLOSSARY_1000.items():
+                all_items.append({"term_en": term, "translation_ka": translation})
+            
+            total_items = len(all_items)
+            logger.info(f"Total glossary terms to sync: {total_items}")
+            
+            # Sync in chunks of 200 to prevent timeout or payload limit errors
+            chunk_size = 200
+            for i in range(0, total_items, chunk_size):
+                chunk = all_items[i:i + chunk_size]
+                res = requests.post(url, json=chunk, headers=headers, timeout=20)
+                if res.status_code not in (200, 201):
+                    logger.error(f"Error seeding chunk {i//chunk_size + 1}: {res.status_code} - {res.text}")
+                else:
+                    logger.info(f"Successfully seeded chunk {i//chunk_size + 1}/{total_items//chunk_size + 1}")
+            logger.info("Auto-seeding technical glossary completed successfully.")
         except Exception as e:
-            logger.error(f"Failed to auto-seed SME to Supabase: {e}")
+            logger.error(f"Failed to auto-seed glossary to Supabase: {e}")
 
 # Enable CORS for frontend integration
 app.add_middleware(
