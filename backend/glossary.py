@@ -1112,4 +1112,6 @@ GLOSSARY_1000 = {
     "test drive": "ტესტ-დრაივი",
     "emission test": "გამონაბოლქვის ტესტი",
     "smog check": "გამონაბოლქვის შემოწმება",
+    "sme": "ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)",
+    "SME": "ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)",
 }

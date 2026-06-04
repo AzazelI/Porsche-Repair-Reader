@@ -1078,6 +1078,8 @@ VALUES
     ('xenon ballast', 'ქსენონის ბლოკი'),
     ('y-pipe', 'Y-ფორმის მილი'),
     ('yaw rate sensor', 'კურსის მდგრადობის სენსორი (მოცურების სენსორი)'),
-    ('zip tie', 'პლასტმასის ხამუთი')
+    ('zip tie', 'პლასტმასის ხამუთი'),
+    ('sme', 'ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)'),
+    ('SME', 'ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)')
 ON CONFLICT (term_en) DO UPDATE
 SET translation_ka = EXCLUDED.translation_ka;

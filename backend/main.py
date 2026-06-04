@@ -51,6 +51,30 @@ logger.addHandler(memory_log_handler)
 
 app = FastAPI(title="Porsche Repair Instruction Reader API")
 
+@app.on_event("startup")
+def startup_event():
+    logger.info("Server startup event triggered.")
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
+    if supabase_url and supabase_key:
+        try:
+            logger.info("Attempting to auto-seed 'SME' term to Supabase database...")
+            headers = {
+                "Authorization": f"Bearer {supabase_key}",
+                "apikey": supabase_key,
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates"
+            }
+            url = f"{supabase_url.rstrip('/')}/rest/v1/technical_glossary"
+            payload = [
+                {"term_en": "sme", "translation_ka": "ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)"},
+                {"term_en": "SME", "translation_ka": "ბატარეის მონიტორინგის მართვის ბლოკი (Steuergerät für Batterieüberwachung / Battery Monitoring Control Unit) - პასუხისმგებელია მაღალი ძაბვის (HV) ბატარეის უჯრედების ძაბვის, ტემპერატურისა და უსაფრთხოების კონტროლზე (BMS-ის ნაწილი)"}
+            ]
+            res = requests.post(url, json=payload, headers=headers, timeout=10)
+            logger.info(f"Supabase glossary seed response status: {res.status_code}")
+        except Exception as e:
+            logger.error(f"Failed to auto-seed SME to Supabase: {e}")
+
 # Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
