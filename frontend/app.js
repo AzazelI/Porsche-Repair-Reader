@@ -1653,93 +1653,11 @@ ${text}`;
     }
     
     function speakText(text) {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            
-            // Clean markdown and HTML tags for a clean text readout
-            let speechString = text
-                .replace(/\*\*/g, '')
-                .replace(/\*/g, '')
-                .replace(/<[^>]*>/g, '')
-                .replace(/-\s+/g, '');
-                
-            const utterance = new SpeechSynthesisUtterance(speechString);
-            const voices = window.speechSynthesis.getVoices();
-            
-            // Try to find a pleasant Female Georgian voice first
-            let targetVoice = voices.find(v => (v.lang.includes("ka") || v.lang.includes("GE")) && 
-                                              (v.name.toLowerCase().includes("female") || 
-                                               v.name.toLowerCase().includes("girl") || 
-                                               v.name.toLowerCase().includes("zira") || 
-                                               v.name.toLowerCase().includes("google") || 
-                                               v.name.toLowerCase().includes("natural")));
-            
-            // Fallback to any Georgian voice
-            if (!targetVoice) {
-                targetVoice = voices.find(v => v.lang.includes("ka") || v.lang.includes("GE"));
-            }
-            
-            // If no Georgian voice is found, search for a high-quality female English voice (e.g. Zira, Susan, Hazel, Google)
-            if (!targetVoice) {
-                targetVoice = voices.find(v => (v.name.toLowerCase().includes("female") || 
-                                               v.name.toLowerCase().includes("google") || 
-                                               v.name.toLowerCase().includes("zira") || 
-                                               v.name.toLowerCase().includes("susan") || 
-                                               v.name.toLowerCase().includes("hazel")) && v.lang.includes("en"));
-            }
-            
-            if (targetVoice) {
-                utterance.voice = targetVoice;
-                utterance.lang = targetVoice.lang;
-            } else {
-                utterance.lang = "ka-GE";
-            }
-            
-            utterance.rate = 1.05;
-            utterance.pitch = 1.05; // Slightly higher pitch for a bright, pleasant female voice
-            window.speechSynthesis.speak(utterance);
-        }
+        // Voice synthesis disabled per user request
     }
     
     function initializeGWENVoice() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            if (gwenStatus) gwenStatus.textContent = "ხმის მართვა არ არის მხარდაჭერილი";
-            return;
-        }
-        
-        voiceRecognition = new SpeechRecognition();
-        voiceRecognition.continuous = false; // Stop after speaking a command for chat flow
-        voiceRecognition.interimResults = false;
-        voiceRecognition.lang = "ka-GE"; // Georgian locale
-        
-        voiceRecognition.onstart = () => {
-            isListening = true;
-            if (gwenVoicePanel) gwenVoicePanel.classList.add("listening");
-            if (gwenStatus) gwenStatus.textContent = "გისმენთ... (Gwen Active)";
-        };
-        
-        voiceRecognition.onend = () => {
-            isListening = false;
-            if (gwenVoicePanel) gwenVoicePanel.classList.remove("listening");
-            if (gwenStatus) gwenStatus.textContent = "Standby (დააწკაპუნეთ სალაპარაკოდ)";
-        };
-        
-        voiceRecognition.onresult = (event) => {
-            const resultIndex = event.resultIndex;
-            const transcript = event.results[resultIndex][0].transcript.trim();
-            
-            // 1. Append user's spoken command to chat
-            appendChatMessage("Technician", transcript, true);
-            
-            // 2. Process command
-            processVoiceCommand(transcript.toLowerCase());
-        };
-        
-        voiceRecognition.onerror = (e) => {
-            console.warn("Gwen recognition error:", e);
-            if (gwenStatus) gwenStatus.textContent = "ხმა ვერ იქნა ამოცნობილი";
-        };
+        // Voice recognition disabled per user request
     }
     
     function processVoiceCommand(command) {
@@ -2025,27 +1943,7 @@ ${text}`;
         });
     }
     
-    if (gwenMicBtn) {
-        gwenMicBtn.addEventListener("click", () => {
-            if (!voiceRecognition) {
-                initializeGWENVoice();
-            }
-            
-            if (voiceRecognition) {
-                if (isListening) {
-                    voiceRecognition.stop();
-                } else {
-                    voiceRecognition.start();
-                    playBeep(987, 0.08);
-                    setTimeout(() => playBeep(1318, 0.15), 80);
-                }
-            }
-        });
-    }
-    
-    if ('speechSynthesis' in window) {
-        window.speechSynthesis.getVoices();
-    }
+    // Voice control event listeners disabled per user request
 });
 
 // Global function to toggle English version of steps (needed for inline onclick)
