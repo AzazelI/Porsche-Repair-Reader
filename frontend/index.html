@@ -44,6 +44,13 @@
             </svg>
             <span class="brand-sub">Aftersales Intelligence</span>
         </div>
+        
+        <!-- Navigation tabs for page toggle -->
+        <nav class="navbar-navigation-tabs">
+            <button id="tab-reader" class="btn-tab active" title="სარემონტო ინსტრუქციების მკითხველი"><i class="fa-solid fa-book-open"></i> მკითხველი</button>
+            <button id="tab-obd" class="btn-tab" title="OBD-II / PIWIS სადიაგნოსტიკო კოკპიტი"><i class="fa-solid fa-gauge-high"></i> OBD-II კოკპიტი</button>
+        </nav>
+        
         <div class="nav-actions" style="display: flex; gap: 15px; align-items: center;">
             <!-- Porsche Driving Mode Dial -->
             <div class="porsche-mode-selector" title="მართვის რეჟიმი (თემა)">
@@ -400,6 +407,197 @@
             <div class="action-footer">
                 <button id="btn-reset" class="btn-secondary"><i class="fa-solid fa-arrow-left"></i> ახალი ფაილის ატვირთვა</button>
                 <button id="btn-print" class="btn-primary" style="margin-left: 15px;"><i class="fa-solid fa-print"></i> სამუშაო ბარათის ბეჭდვა</button>
+            </div>
+
+        </section>
+
+        <!-- OBD-II / PIWIS VIRTUAL TELEMETRY COCKPIT SECTION (Hidden by default) -->
+        <section id="obd-section" class="obd-section hidden">
+            
+            <!-- Page Title Bar -->
+            <div class="instruction-header-title glassmorphism" style="margin-bottom: 25px;">
+                <div class="title-ge" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <h2>OBD-II / PIWIS სადიაგნოსტიკო კოკპიტი</h2>
+                    </div>
+                    <span class="obd-status-badge">
+                        <span class="pulse-dot green"></span> Connected (კავშირი აქტიურია)
+                    </span>
+                </div>
+                <span class="title-en" style="margin-left: 36px; display: block;">Real-time OBD-II Diagnostics & CAN-bus Telemetry Sweep</span>
+            </div>
+
+            <!-- Main Telemetry Grid -->
+            <div class="obd-grid">
+                
+                <!-- Left Column: Gauges (Tachometer, Speedometer, Temp) -->
+                <div class="panel obd-gauges-panel glassmorphism">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-tachometer-alt"></i> ხელსაწყოების პანელი (Virtual Gauges)</h2>
+                    </div>
+                    <div class="gauges-flex-container">
+                        
+                        <!-- Tachometer (RPM) Gauge -->
+                        <div class="obd-gauge-card">
+                            <div class="gauge-svg-wrapper">
+                                <svg class="obd-gauge-svg" viewBox="0 0 200 200">
+                                    <circle class="gauge-bg" cx="100" cy="100" r="80"></circle>
+                                    <path class="gauge-redline" d="M 156.5 43.5 A 80 80 0 0 1 180 100" fill="none" stroke="#d5001c" stroke-width="5" opacity="0.6" filter="url(#glow-red)"></path>
+                                    
+                                    <!-- Dial Ticks -->
+                                    <g class="gauge-ticks" stroke="rgba(255,255,255,0.25)" stroke-width="1.8">
+                                        <line x1="100" y1="20" x2="100" y2="28" transform="rotate(-120 100 100)" />
+                                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(-90 100 100)" />
+                                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(-60 100 100)" />
+                                        <line x1="100" y1="20" x2="100" y2="28" transform="rotate(-30 100 100)" />
+                                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(0 100 100)" />
+                                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(30 100 100)" />
+                                        <line x1="100" y1="20" x2="100" y2="28" transform="rotate(60 100 100)" />
+                                        <line x1="100" y1="20" x2="100" y2="25" transform="rotate(90 100 100)" stroke="#d5001c" />
+                                        <line x1="100" y1="20" x2="100" y2="28" transform="rotate(120 100 100)" stroke="#d5001c" />
+                                    </g>
+                                    
+                                    <!-- Needle Group -->
+                                    <g id="obd-rpm-needle-group" class="gauge-needle-group" style="transform: rotate(-120deg); transform-origin: 100px 100px;">
+                                        <line class="gauge-needle" x1="100" y1="100" x2="100" y2="22" stroke="#88d413" stroke-width="3" filter="url(#glow-red)" />
+                                        <circle cx="100" cy="100" r="9" fill="#141417" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"></circle>
+                                    </g>
+                                </svg>
+                                <div class="gauge-digital-readout">
+                                    <span id="obd-rpm-gear" class="gauge-gear">N</span>
+                                    <span id="obd-rpm-val" class="gauge-val">800</span>
+                                    <span class="gauge-unit">RPM</span>
+                                </div>
+                            </div>
+                            <span class="gauge-label">ძრავის ბრუნთა რიცხვი</span>
+                        </div>
+
+                        <!-- Speedometer (km/h) Gauge -->
+                        <div class="obd-gauge-card">
+                            <div class="gauge-svg-wrapper">
+                                <svg class="obd-gauge-svg" viewBox="0 0 200 200">
+                                    <circle class="gauge-bg" cx="100" cy="100" r="80"></circle>
+                                    <path id="obd-speed-arc" class="gauge-progress-arc" d="M 43.5 156.5 A 80 80 0 1 1 156.5 156.5" fill="none" stroke="#0096ff" stroke-width="6" stroke-dasharray="360" stroke-dashoffset="360" stroke-linecap="round" style="transform: rotate(45deg); transform-origin: 100px 100px; transition: stroke-dashoffset 0.08s ease-out;"></path>
+                                </svg>
+                                <div class="gauge-digital-readout">
+                                    <span id="obd-speed-val" class="gauge-val" style="color: #0096ff;">0</span>
+                                    <span class="gauge-unit">km/h</span>
+                                </div>
+                            </div>
+                            <span class="gauge-label">ავტომობილის სიჩქარე</span>
+                        </div>
+
+                        <!-- Temperature (°C) Gauge -->
+                        <div class="obd-gauge-card">
+                            <div class="gauge-svg-wrapper">
+                                <svg class="obd-gauge-svg" viewBox="0 0 200 200">
+                                    <path class="gauge-bg-arc" d="M 45 155 A 80 80 0 1 1 155 155" fill="none" stroke="#28282e" stroke-width="6" stroke-linecap="round"></path>
+                                    <!-- Normal range arc (green) -->
+                                    <path class="gauge-normal-arc" d="M 45 155 A 80 80 0 0 1 130 45" fill="none" stroke="#88d413" stroke-width="6" opacity="0.45" stroke-linecap="round"></path>
+                                    <!-- Redline temperature warning -->
+                                    <path class="gauge-warning-arc" d="M 130 45 A 80 80 0 0 1 155 155" fill="none" stroke="#d5001c" stroke-width="6" opacity="0.65" stroke-linecap="round"></path>
+                                    
+                                    <g id="obd-temp-needle-group" class="gauge-needle-group" style="transform: rotate(-120deg); transform-origin: 100px 100px; transition: transform 0.3s ease-out;">
+                                        <line class="gauge-needle" x1="100" y1="100" x2="100" y2="30" stroke="#ffaa00" stroke-width="2.5" />
+                                        <circle cx="100" cy="100" r="7" fill="#141417" stroke="rgba(255,255,255,0.2)" stroke-width="1"></circle>
+                                    </g>
+                                </svg>
+                                <div class="gauge-digital-readout">
+                                    <span id="obd-temp-val" class="gauge-val" style="color: #ffaa00;">90</span>
+                                    <span class="gauge-unit">°C</span>
+                                </div>
+                            </div>
+                            <span class="gauge-label">გამაგრილებელი სითხე</span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Right Column: Interactive Sliders & Live Control Switchboard -->
+                <div class="panel obd-controls-panel glassmorphism">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-sliders"></i> ტელემეტრიის მართვა (Simulator Panel)</h2>
+                    </div>
+                    
+                    <!-- Sliders & Toggles -->
+                    <div class="obd-controls-group">
+                        
+                        <!-- Throttle (TPS) Slider -->
+                        <div class="control-row">
+                            <div class="slider-header">
+                                <span><i class="fa-solid fa-gauge-simple-high"></i> დროსელის პოზიცია (TPS)</span>
+                                <span id="obd-tps-slider-val" class="highlight-val-small">0%</span>
+                            </div>
+                            <input type="range" id="obd-tps-slider" min="0" max="100" value="0" class="porsche-slider">
+                        </div>
+
+                        <!-- Suspension (PASM) Slider -->
+                        <div class="control-row">
+                            <div class="slider-header">
+                                <span><i class="fa-solid fa-sliders"></i> ამორტიზატორების სიხისტე (PASM)</span>
+                                <span id="obd-pasm-slider-val" class="highlight-val-small">30%</span>
+                            </div>
+                            <input type="range" id="obd-pasm-slider" min="0" max="100" value="30" class="porsche-slider">
+                        </div>
+
+                        <!-- Exhaust Valve Toggle -->
+                        <div class="control-row toggle-row-large">
+                            <span class="toggle-label-large"><i class="fa-solid fa-wind"></i> სპორტული გამონაბოლქვი (Sport Exhaust Valve)</span>
+                            <label class="porsche-switch-large">
+                                <input type="checkbox" id="obd-exhaust-toggle">
+                                <span class="switch-slider-large"></span>
+                            </label>
+                        </div>
+                        
+                    </div>
+
+                    <!-- Glove-friendly Touch Buttons -->
+                    <div class="obd-buttons-grid" style="margin-top: 25px;">
+                        <button id="btn-obd-accelerate" class="btn-piwis btn-primary-large" title="დინამიური აჩქარების სიმულაცია (Launch Run)">
+                            <i class="fa-solid fa-bolt"></i> აჩქარების ტესტი (Launch Run)
+                        </button>
+                        <div style="display: flex; gap: 15px;">
+                            <button id="btn-obd-trigger-fault" class="btn-piwis btn-warn-large" style="flex: 1;" title="DTC შეცდომის იმიტაცია (Cylinder Misfire P0300)">
+                                <i class="fa-solid fa-triangle-exclamation"></i> შეცდომის იმიტაცია
+                            </button>
+                            <button id="btn-obd-clear-dtc" class="btn-piwis btn-success-large" style="flex: 1;" title="აქტიური შეცდომების (DTC) წაშლა">
+                                <i class="fa-solid fa-broom"></i> DTC წაშლა
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Live scrolling CAN-bus stream & DTC status logger -->
+            <div class="obd-grid" style="margin-top: 25px;">
+                
+                <!-- CAN-bus Terminal Log Viewport -->
+                <div class="panel can-terminal-panel glassmorphism" style="margin-bottom: 0;">
+                    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2><i class="fa-solid fa-terminal"></i> CAN-bus Live Stream Log (მოწყობილობის ტელემეტრია)</h2>
+                        <span class="pulse-rate">100 ms refresh</span>
+                    </div>
+                    <div class="terminal-container">
+                        <div class="terminal-scanlines"></div>
+                        <pre id="can-bus-terminal" class="can-terminal">Initializing CAN-bus interface...\nReady to stream vehicle bus data...</pre>
+                    </div>
+                </div>
+
+                <!-- Active DTC codes ledger -->
+                <div class="panel obd-dtc-panel glassmorphism" style="margin-bottom: 0;">
+                    <div class="panel-header">
+                        <h2><i class="fa-solid fa-bug"></i> აქტიური შეცდომები (Active DTCs)</h2>
+                    </div>
+                    <div id="obd-dtc-log" class="obd-dtc-log">
+                        <div class="dtc-item ok-status">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span>სისტემა სუფთაა (DTC codes: 0)</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </section>

@@ -2553,6 +2553,550 @@ body.body-rumble {
 }
 
 /* ==========================================
+   OBD-II & PIWIS VIRTUAL TELEMETRY COCKPIT STYLES
+   ========================================== */
+
+/* Navbar Navigation Tabs */
+.navbar-navigation-tabs {
+    display: flex;
+    gap: 10px;
+    margin: 0 auto 0 30px;
+    background: rgba(20, 20, 23, 0.4);
+    border: 1px solid var(--color-border);
+    padding: 4px;
+    border-radius: 30px;
+}
+
+.btn-tab {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--color-text-grey);
+    font-family: var(--font-porsche);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-tab:hover {
+    color: var(--color-text-white);
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.btn-tab.active {
+    background-color: #28282e;
+    color: var(--color-text-white);
+    border-color: var(--color-border-glow);
+}
+
+body.theme-sport .btn-tab.active {
+    background-color: var(--color-guards-red);
+    color: var(--color-text-white);
+    box-shadow: 0 0 10px rgba(213, 0, 28, 0.3);
+    border-color: transparent;
+}
+
+body.theme-track .btn-tab.active {
+    background-color: var(--color-amber-gold);
+    color: var(--color-text-dark);
+    box-shadow: 0 0 10px rgba(208, 158, 58, 0.3);
+    border-color: transparent;
+}
+
+/* OBD Layout Section */
+.obd-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.obd-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 30px;
+    width: 100%;
+}
+
+.obd-gauges-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Gauges Container */
+.gauges-flex-container {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 25px;
+    padding: 15px 0;
+}
+
+.obd-gauge-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 160px;
+    position: relative;
+}
+
+.gauge-svg-wrapper {
+    position: relative;
+    width: 165px;
+    height: 165px;
+}
+
+.obd-gauge-svg {
+    width: 100%;
+    height: 100%;
+}
+
+.gauge-bg {
+    fill: none;
+    stroke: #16161a;
+    stroke-width: 10;
+}
+
+.gauge-bg-arc {
+    fill: none;
+    stroke: #16161a;
+    stroke-width: 8;
+}
+
+.gauge-normal-arc {
+    fill: none;
+}
+
+.gauge-warning-arc {
+    fill: none;
+}
+
+.gauge-progress-arc {
+    fill: none;
+    transition: stroke-dashoffset 0.08s ease-out;
+}
+
+.gauge-needle {
+    stroke-linecap: round;
+}
+
+.gauge-digital-readout {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    pointer-events: none;
+}
+
+.gauge-gear {
+    font-size: 20px;
+    font-weight: 850;
+    color: var(--color-amber-gold);
+    line-height: 1;
+    margin-bottom: 2px;
+    font-family: monospace;
+}
+
+body.theme-sport .gauge-gear {
+    color: var(--color-guards-red);
+}
+
+.gauge-val {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--color-text-white);
+    line-height: 1;
+    font-family: monospace;
+}
+
+.gauge-unit {
+    font-size: 9px;
+    color: var(--color-text-grey);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+    text-transform: uppercase;
+}
+
+.gauge-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-grey);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    text-align: center;
+}
+
+/* Status Badge */
+.obd-status-badge {
+    background: rgba(136, 212, 19, 0.1);
+    border: 1px solid rgba(136, 212, 19, 0.3);
+    color: #88d413;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: 0.5px;
+}
+
+.obd-status-badge.fault-mode {
+    background: rgba(213, 0, 28, 0.1);
+    border: 1px solid rgba(213, 0, 28, 0.3);
+    color: var(--color-guards-red);
+}
+
+/* Telemetry Controls Switchboard */
+.obd-controls-group {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.control-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-white);
+}
+
+.slider-header span i {
+    color: var(--color-amber-gold);
+    margin-right: 5px;
+}
+
+body.theme-sport .slider-header span i {
+    color: var(--color-guards-red);
+}
+
+.highlight-val-small {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--color-amber-gold);
+    font-family: monospace;
+}
+
+body.theme-sport .highlight-val-small {
+    color: var(--color-guards-red);
+}
+
+/* Custom styled Porsche Sliders */
+.porsche-slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: #1c1c24;
+    outline: none;
+    border: 1px solid var(--color-border);
+}
+
+.porsche-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-amber-gold);
+    cursor: pointer;
+    border: 2px solid #ffffff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s ease;
+}
+
+.porsche-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+}
+
+body.theme-sport .porsche-slider::-webkit-slider-thumb {
+    background: var(--color-guards-red);
+}
+
+/* Large Switch Toggle */
+.toggle-row-large {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px dashed var(--color-border);
+    border-bottom: 1px dashed var(--color-border);
+}
+
+.toggle-label-large {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--color-text-white);
+}
+
+.toggle-label-large i {
+    margin-right: 5px;
+    color: var(--color-text-grey);
+}
+
+.porsche-switch-large {
+    position: relative;
+    display: inline-block;
+    width: 62px;
+    height: 32px;
+}
+
+.porsche-switch-large input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.switch-slider-large {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #1c1c24;
+    border: 1px solid var(--color-border);
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.switch-slider-large:before {
+    position: absolute;
+    content: "";
+    height: 24px;
+    width: 24px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--color-text-grey);
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.porsche-switch-large input:checked + .switch-slider-large {
+    background-color: rgba(136, 212, 19, 0.15);
+    border-color: #88d413;
+}
+
+.porsche-switch-large input:checked + .switch-slider-large:before {
+    transform: translateX(30px);
+    background-color: #88d413;
+    box-shadow: 0 0 10px rgba(136, 212, 19, 0.5);
+}
+
+/* Interactive Buttons */
+.btn-piwis {
+    font-family: var(--font-porsche);
+    font-weight: 700;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    border: none;
+    text-transform: uppercase;
+}
+
+.btn-primary-large {
+    width: 100%;
+    height: 48px;
+    background-color: var(--color-guards-red);
+    color: #fff;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+.btn-primary-large:hover {
+    background-color: var(--color-guards-red-hover);
+    box-shadow: 0 0 15px rgba(213, 0, 28, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-warn-large {
+    height: 48px;
+    background-color: rgba(213, 0, 28, 0.08);
+    border: 1px solid var(--color-guards-red) !important;
+    color: var(--color-guards-red);
+    font-size: 13px;
+}
+
+.btn-warn-large:hover {
+    background-color: var(--color-guards-red);
+    color: #fff;
+    box-shadow: 0 0 12px rgba(213, 0, 28, 0.3);
+}
+
+.btn-success-large {
+    height: 48px;
+    background-color: rgba(136, 212, 19, 0.08);
+    border: 1px solid #88d413 !important;
+    color: #88d413;
+    font-size: 13px;
+}
+
+.btn-success-large:hover {
+    background-color: #88d413;
+    color: #0c0c0e;
+    box-shadow: 0 0 12px rgba(136, 212, 19, 0.3);
+}
+
+/* CAN Terminal Panel */
+.can-terminal-panel {
+    display: flex;
+    flex-direction: column;
+}
+
+.pulse-rate {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--color-text-grey);
+    background-color: rgba(255,255,255,0.03);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--color-border);
+}
+
+.terminal-container {
+    position: relative;
+    background: #060608;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 18px;
+    overflow: hidden;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+}
+
+.terminal-scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.25) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.can-terminal {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1dd1a1;
+    overflow-y: auto;
+    height: 200px;
+    line-height: 1.6;
+    margin: 0;
+    white-space: pre-wrap;
+    text-shadow: 0 0 4px rgba(29, 209, 161, 0.4);
+}
+
+/* Custom terminal scrollbar */
+.can-terminal::-webkit-scrollbar {
+    width: 6px;
+}
+.can-terminal::-webkit-scrollbar-track {
+    background: #060608;
+}
+.can-terminal::-webkit-scrollbar-thumb {
+    background: #1a1a24;
+    border-radius: 3px;
+}
+.can-terminal::-webkit-scrollbar-thumb:hover {
+    background: #1dd1a1;
+}
+
+/* Active DTC Log */
+.obd-dtc-log {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 200px;
+    overflow-y: auto;
+}
+
+.dtc-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-size: 13.5px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.dtc-item.ok-status {
+    border-color: rgba(136, 212, 19, 0.15);
+    background-color: rgba(136, 212, 19, 0.02);
+    color: #88d413;
+}
+
+.dtc-item.ok-status i {
+    font-size: 16px;
+    animation: none;
+}
+
+.dtc-item.error-status {
+    border-color: rgba(213, 0, 28, 0.25);
+    background-color: rgba(213, 0, 28, 0.05);
+    color: #ff334b;
+    box-shadow: 0 0 10px rgba(213, 0, 28, 0.05);
+    animation: dtc-glow-pulse 2s infinite alternate;
+}
+
+.dtc-item.error-status i {
+    font-size: 16px;
+    color: var(--color-guards-red);
+    animation: warning-flicker 1.5s infinite;
+}
+
+.dtc-code-badge {
+    background: rgba(213, 0, 28, 0.15);
+    border: 1px solid rgba(213, 0, 28, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-weight: 700;
+    margin-right: 5px;
+}
+
+@keyframes dtc-glow-pulse {
+    0% { border-color: rgba(213, 0, 28, 0.2); }
+    100% { border-color: rgba(213, 0, 28, 0.45); }
+}
+
+@keyframes warning-flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+}
+
+/* ==========================================
    WORKSHOP PRINT SHEET (EXCLUSIVE MANUFAKTUR)
    ========================================== */
 @media print {
