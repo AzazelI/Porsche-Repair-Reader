@@ -35,7 +35,7 @@ body.porsche-theme {
     flex-direction: column;
     overflow-x: hidden;
     background-image: radial-gradient(circle at 10% 20%, rgba(213, 0, 28, 0.05) 0%, transparent 40%),
-                      radial-gradient(circle at 90% 80%, rgba(0, 204, 102, 0.03) 0%, transparent 40%),
+                      radial-gradient(circle at 90% 80%, rgba(136, 212, 19, 0.03) 0%, transparent 40%),
                       linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
                       linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px);
     background-size: 100% 100%, 100% 100%, 24px 24px, 24px 24px;
@@ -1261,21 +1261,21 @@ body.porsche-theme.theme-sport .step-check-btn:hover {
 
 .step-card.completed {
     opacity: 0.45;
-    border-color: rgba(0, 204, 102, 0.25);
-    background-color: rgba(0, 204, 102, 0.01);
+    border-color: rgba(136, 212, 19, 0.25);
+    background-color: rgba(136, 212, 19, 0.01);
     box-shadow: none;
 }
 
 .step-card.completed .step-node {
-    border-color: #00cc66;
-    background-color: #00cc66;
-    box-shadow: 0 0 8px #00cc66;
+    border-color: #88d413;
+    background-color: #88d413;
+    box-shadow: 0 0 8px #88d413;
 }
 
 .step-card.completed .step-check-btn {
-    border-color: #00cc66;
-    background-color: rgba(0, 204, 102, 0.1);
-    color: #00cc66;
+    border-color: #88d413;
+    background-color: rgba(136, 212, 19, 0.1);
+    color: #88d413;
 }
 
 .step-card.completed .step-desc-ka {
@@ -1567,9 +1567,9 @@ body.theme-track .section-title h2 i {
 }
 
 .demo-card-badge.green {
-    background-color: rgba(0, 204, 102, 0.15);
-    color: #00cc66;
-    border: 1px solid rgba(0, 204, 102, 0.3);
+    background-color: rgba(136, 212, 19, 0.15);
+    color: #88d413;
+    border: 1px solid rgba(136, 212, 19, 0.3);
 }
 
 .demo-card-badge.blue {
@@ -1632,14 +1632,14 @@ body.theme-track .section-title h2 i {
 }
 
 .demo-card.cayenne:hover {
-    border-color: #00cc66;
-    box-shadow: 0 10px 30px rgba(0, 204, 102, 0.12), var(--box-shadow-premium);
+    border-color: #88d413;
+    box-shadow: 0 10px 30px rgba(136, 212, 19, 0.12), var(--box-shadow-premium);
     transform: translateY(-5px);
 }
 
 .demo-card.cayenne:hover .btn-demo-start {
-    color: #00cc66;
-    text-shadow: 0 0 10px rgba(0, 204, 102, 0.5);
+    color: #88d413;
+    text-shadow: 0 0 10px rgba(136, 212, 19, 0.5);
 }
 
 .demo-card.taycan:hover {
@@ -1868,7 +1868,7 @@ body.theme-track .section-title h2 i {
 }
 
 /* Neon utilities */
-.text-green { color: #00cc66 !important; }
+.text-green { color: #88d413 !important; }
 .text-blue { color: #0096ff !important; }
 .text-amber { color: var(--color-amber-gold) !important; }
 
@@ -1882,8 +1882,8 @@ body.theme-track .section-title h2 i {
 }
 
 .pulse-dot.green {
-    background-color: #00cc66;
-    box-shadow: 0 0 8px #00cc66;
+    background-color: #88d413;
+    box-shadow: 0 0 8px #88d413;
     animation: pulse-green 1.5s infinite;
 }
 
@@ -1900,9 +1900,9 @@ body.theme-track .section-title h2 i {
 }
 
 @keyframes pulse-green {
-    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(0, 204, 102, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 204, 102, 0); }
-    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(0, 204, 102, 0); }
+    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(136, 212, 19, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(136, 212, 19, 0); }
+    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(136, 212, 19, 0); }
 }
 
 @keyframes pulse-amber {
@@ -1946,7 +1946,7 @@ body.theme-track .section-title h2 i {
 }
 
 .telemetry-wave.line-1 {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 30'%3E%3Cpath d='M0,15 Q20,2 40,15 T80,15' fill='none' stroke='%2300cc66' stroke-width='1.5'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 30'%3E%3Cpath d='M0,15 Q20,2 40,15 T80,15' fill='none' stroke='%2388d413' stroke-width='1.5'/%3E%3C/svg%3E");
     opacity: 0.6;
     animation: wave-move 3s linear infinite;
 }

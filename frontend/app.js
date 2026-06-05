@@ -259,7 +259,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
             if (ollamaStatusMsg) {
-                ollamaStatusMsg.style.color = "#00cc66";
+                ollamaStatusMsg.style.color = "#88d413";
                 ollamaStatusMsg.textContent = `კავშირი წარმატებით დამყარდა! ნაპოვნია ${models.length} მოდელი.`;
             }
             if (!silent) alert("კავშირი წარმატებით დამყარდა!");
@@ -713,9 +713,9 @@ ${text}`;
             const engineName = isLocal ? data.model_name : "Cloud Gemini/Groq";
             resAiEngine.innerHTML = `<i class="fa-solid fa-robot"></i> Engine: ${engineName}`;
             if (isLocal) {
-                resAiEngine.style.background = "rgba(0, 204, 102, 0.1)";
-                resAiEngine.style.borderColor = "rgba(0, 204, 102, 0.3)";
-                resAiEngine.style.color = "#00ff7f";
+                resAiEngine.style.background = "rgba(136, 212, 19, 0.1)";
+                resAiEngine.style.borderColor = "rgba(136, 212, 19, 0.3)";
+                resAiEngine.style.color = "#88d413";
             } else {
                 resAiEngine.style.background = "rgba(213, 0, 28, 0.1)";
                 resAiEngine.style.borderColor = "rgba(213, 0, 28, 0.3)";
