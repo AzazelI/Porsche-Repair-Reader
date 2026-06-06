@@ -750,20 +750,62 @@ def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.3-70b-
         logger.error(f"General Error during Groq analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+def render_pdf_to_jpeg_b64(pdf_path: str, dpi: int = 200, max_pages: int = 10,
+                           quality: int = 90, max_payload_mb: float = 4.5) -> list:
+    """Render PDF pages to grayscale JPEGs (base64) for Gemini Vision.
+
+    Used for image-only / scanned PDFs where get_text() yields nothing. Sending
+    the raw PDF let Gemini render it internally at low resolution, which dropped
+    small table values that are split into tiny image fragments inside narrow
+    cells (e.g. coolant capacity "2,55 l"). A high-DPI local grayscale raster
+    keeps those digits as continuous, legible pixels so OCR no longer loses them.
+
+    Grayscale roughly thirds the size vs RGB (digits don't need colour), letting
+    us afford higher DPI. DPI is stepped down adaptively to keep the whole
+    request under max_payload_mb (avoids API gateway limits / timeouts / 429s)."""
+    doc = fitz.open(pdf_path)
+    total = len(doc)
+    n = min(total, max_pages)
+    if total > max_pages:
+        logger.warning(f"Image-only PDF has {total} pages; rendering first {max_pages} "
+                       f"to cap payload size and API quota usage.")
+    images = []
+    try:
+        for attempt_dpi in (dpi, 150, 120):
+            images = []
+            for i in range(n):
+                pix = doc[i].get_pixmap(dpi=attempt_dpi, colorspace=fitz.csGRAY)
+                jpeg_bytes = pix.tobytes("jpeg", jpg_quality=quality)
+                images.append(base64.b64encode(jpeg_bytes).decode("utf-8"))
+            size_mb = sum(len(b) for b in images) / 1048576
+            logger.info(f"Rendered {len(images)} page(s) to grayscale JPEG @ {attempt_dpi} DPI "
+                        f"(~{size_mb:.2f} MB base64).")
+            if size_mb <= max_payload_mb:
+                break
+            logger.warning(f"Payload {size_mb:.2f} MB exceeds {max_payload_mb} MB cap; "
+                           f"retrying at lower DPI.")
+    finally:
+        doc.close()
+    return images
+
+
 def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: str = "gemini-2.5-flash", extracted_text: Optional[str] = None) -> dict:
-    """Encodes PDF as base64 and sends it directly to Gemini for visual OCR and analysis."""
+    """Renders an image-only PDF to high-DPI page images and sends them to Gemini for visual OCR and analysis."""
     if not api_key:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Gemini API Key is missing."
         )
 
-    # Base64 encode the PDF file
+    # Render pages to grayscale JPEGs instead of shipping the raw PDF. Gemini's
+    # internal PDF rasteriser runs at low DPI and silently drops small fragmented
+    # table numbers (e.g. "2,55 l"); a local high-DPI raster preserves them.
     try:
-        with open(pdf_path, "rb") as f:
-            pdf_data = base64.b64encode(f.read()).decode("utf-8")
+        page_images = render_pdf_to_jpeg_b64(pdf_path)
+        if not page_images:
+            raise ValueError("No pages were rendered from the PDF.")
     except Exception as e:
-        logger.error(f"Error base64 encoding PDF: {e}")
+        logger.error(f"Error rendering PDF pages to images: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to prepare PDF data: {str(e)}")
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
@@ -772,8 +814,9 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
 
     prompt = (
         "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
-        "Your task is to analyze the attached PDF manual, extract all key information, "
-        "and return a highly structured JSON response in the specified schema.\n\n"
+        "Your task is to analyze the attached manual pages (provided as high-resolution images), extract all key information, "
+        "and return a highly structured JSON response in the specified schema.\n"
+        "Read small print and narrow table cells carefully — fluid capacities (e.g. '2,55 l'), torque values, and FRU/AW figures often sit in tiny table cells and MUST NOT be skipped. Note European decimals use a comma (2,55 = 2.55).\n\n"
         
         "CRITICAL DOMAIN RULES:\n"
         "1. LABOR TIME: Search the text carefully for any labor time, AW, or FRU quantity. For example, 'Replacing the CVT belt (7 FRU)'. If a number is specified in the text (like '7 FRU' or '7 AW'), you MUST extract that exact number and express it in FRUs (e.g., '7 FRU'). Do NOT guess or inflate the number! If no time is specified at all, only then estimate a realistic value (e.g., '12 FRU') based on complexity.\n"
@@ -792,19 +835,15 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
         "7. Extract Special Tools required.\n"
     )
 
+    parts = [
+        {"inlineData": {"mimeType": "image/jpeg", "data": img}}
+        for img in page_images
+    ]
+    parts.append({"text": prompt})
+
     payload = {
         "contents": [{
-            "parts": [
-                {
-                    "inlineData": {
-                        "mimeType": "application/pdf",
-                        "data": pdf_data
-                    }
-                },
-                {
-                    "text": prompt
-                }
-            ]
+            "parts": parts
         }],
         "generationConfig": {
             "responseMimeType": "application/json",
