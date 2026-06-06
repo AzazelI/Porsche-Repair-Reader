@@ -880,6 +880,60 @@ body.porsche-theme {
 }
 
 /* ==========================================
+   FLUID CAPACITIES PANEL
+   ========================================== */
+
+.fluids-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.fluid-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(136, 212, 19, 0.04);
+    border: 1px solid rgba(136, 212, 19, 0.15);
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fluid-row:hover {
+    border-color: rgba(136, 212, 19, 0.4);
+    background: rgba(136, 212, 19, 0.07);
+}
+
+.fluid-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.fluid-name-ka {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-white);
+}
+
+.fluid-name-en {
+    font-size: 10.5px;
+    color: var(--color-text-grey);
+    font-style: italic;
+}
+
+.fluid-quantity {
+    font-family: monospace;
+    font-size: 15px;
+    font-weight: 800;
+    color: #88d413;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* ==========================================
    RESET BUTTONS & FOOTER
    ========================================== */
 
@@ -2561,10 +2615,11 @@ body.body-rumble {
     display: flex;
     gap: 10px;
     margin: 0 auto 0 30px;
-    background: rgba(20, 20, 23, 0.4);
+    background: rgba(12, 12, 15, 0.7);
     border: 1px solid var(--color-border);
-    padding: 4px;
+    padding: 5px;
     border-radius: 30px;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .btn-tab {
@@ -2574,7 +2629,7 @@ body.body-rumble {
     font-family: var(--font-porsche);
     font-size: 13px;
     font-weight: 700;
-    padding: 8px 18px;
+    padding: 8px 20px;
     border-radius: 20px;
     cursor: pointer;
     display: flex;
@@ -2585,26 +2640,28 @@ body.body-rumble {
 
 .btn-tab:hover {
     color: var(--color-text-white);
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: rgba(255, 255, 255, 0.05);
+    transform: translateY(-1px);
 }
 
 .btn-tab.active {
     background-color: #28282e;
     color: var(--color-text-white);
     border-color: var(--color-border-glow);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 body.theme-sport .btn-tab.active {
     background-color: var(--color-guards-red);
     color: var(--color-text-white);
-    box-shadow: 0 0 10px rgba(213, 0, 28, 0.3);
+    box-shadow: 0 0 15px rgba(213, 0, 28, 0.45);
     border-color: transparent;
 }
 
 body.theme-track .btn-tab.active {
     background-color: var(--color-amber-gold);
     color: var(--color-text-dark);
-    box-shadow: 0 0 10px rgba(208, 158, 58, 0.3);
+    box-shadow: 0 0 15px rgba(208, 158, 58, 0.45);
     border-color: transparent;
 }
 
@@ -2620,6 +2677,7 @@ body.theme-track .btn-tab.active {
     grid-template-columns: 1.4fr 1fr;
     gap: 30px;
     width: 100%;
+    margin-bottom: 25px;
 }
 
 .obd-gauges-panel {
@@ -2633,24 +2691,29 @@ body.theme-track .btn-tab.active {
     justify-content: space-around;
     align-items: center;
     flex-wrap: wrap;
-    gap: 25px;
-    padding: 15px 0;
+    gap: 30px;
+    padding: 20px 10px;
 }
 
 .obd-gauge-card {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 15px;
     flex: 1;
-    min-width: 160px;
+    min-width: 170px;
     position: relative;
+    padding: 15px;
+    background: radial-gradient(circle at center, rgba(20, 20, 24, 0.8) 0%, rgba(10, 10, 12, 0.9) 100%);
+    border-radius: 100px 100px 20px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.02);
 }
 
 .gauge-svg-wrapper {
     position: relative;
-    width: 165px;
-    height: 165px;
+    width: 180px;
+    height: 180px;
 }
 
 .obd-gauge-svg {
@@ -2660,13 +2723,13 @@ body.theme-track .btn-tab.active {
 
 .gauge-bg {
     fill: none;
-    stroke: #16161a;
-    stroke-width: 10;
+    stroke: #09090b;
+    stroke-width: 9;
 }
 
 .gauge-bg-arc {
     fill: none;
-    stroke: #16161a;
+    stroke: #09090b;
     stroke-width: 8;
 }
 
@@ -2689,7 +2752,7 @@ body.theme-track .btn-tab.active {
 
 .gauge-digital-readout {
     position: absolute;
-    top: 50%;
+    top: 52%;
     left: 50%;
     transform: translate(-50%, -50%);
     display: flex;
@@ -2697,35 +2760,39 @@ body.theme-track .btn-tab.active {
     align-items: center;
     text-align: center;
     pointer-events: none;
+    z-index: 5;
 }
 
 .gauge-gear {
-    font-size: 20px;
-    font-weight: 850;
+    font-size: 24px;
+    font-weight: 900;
     color: var(--color-amber-gold);
     line-height: 1;
     margin-bottom: 2px;
     font-family: monospace;
+    text-shadow: 0 0 10px rgba(208, 158, 58, 0.5);
 }
 
 body.theme-sport .gauge-gear {
     color: var(--color-guards-red);
+    text-shadow: 0 0 10px rgba(213, 0, 28, 0.5);
 }
 
 .gauge-val {
-    font-size: 24px;
+    font-size: 26px;
     font-weight: 800;
     color: var(--color-text-white);
     line-height: 1;
-    font-family: monospace;
+    font-family: 'Outfit', sans-serif;
+    letter-spacing: -0.5px;
 }
 
 .gauge-unit {
     font-size: 9px;
     color: var(--color-text-grey);
     font-weight: 700;
-    letter-spacing: 0.5px;
-    margin-top: 2px;
+    letter-spacing: 1px;
+    margin-top: 4px;
     text-transform: uppercase;
 }
 
@@ -2740,10 +2807,10 @@ body.theme-sport .gauge-gear {
 
 /* Status Badge */
 .obd-status-badge {
-    background: rgba(136, 212, 19, 0.1);
-    border: 1px solid rgba(136, 212, 19, 0.3);
+    background: rgba(136, 212, 19, 0.08);
+    border: 1px solid rgba(136, 212, 19, 0.25);
     color: #88d413;
-    padding: 4px 12px;
+    padding: 5px 14px;
     border-radius: 20px;
     font-size: 11px;
     font-weight: 700;
@@ -2751,12 +2818,14 @@ body.theme-sport .gauge-gear {
     align-items: center;
     gap: 8px;
     letter-spacing: 0.5px;
+    box-shadow: 0 0 10px rgba(136, 212, 19, 0.1);
 }
 
 .obd-status-badge.fault-mode {
-    background: rgba(213, 0, 28, 0.1);
-    border: 1px solid rgba(213, 0, 28, 0.3);
+    background: rgba(213, 0, 28, 0.08);
+    border: 1px solid rgba(213, 0, 28, 0.25);
     color: var(--color-guards-red);
+    box-shadow: 0 0 10px rgba(213, 0, 28, 0.1);
 }
 
 /* Telemetry Controls Switchboard */
@@ -2769,7 +2838,7 @@ body.theme-sport .gauge-gear {
 .control-row {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
 }
 
 .slider-header {
@@ -2783,7 +2852,7 @@ body.theme-sport .gauge-gear {
 
 .slider-header span i {
     color: var(--color-amber-gold);
-    margin-right: 5px;
+    margin-right: 6px;
 }
 
 body.theme-sport .slider-header span i {
@@ -2791,14 +2860,16 @@ body.theme-sport .slider-header span i {
 }
 
 .highlight-val-small {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 800;
     color: var(--color-amber-gold);
     font-family: monospace;
+    text-shadow: 0 0 8px rgba(208, 158, 58, 0.3);
 }
 
 body.theme-sport .highlight-val-small {
     color: var(--color-guards-red);
+    text-shadow: 0 0 8px rgba(213, 0, 28, 0.3);
 }
 
 /* Custom styled Porsche Sliders */
@@ -2807,38 +2878,46 @@ body.theme-sport .highlight-val-small {
     width: 100%;
     height: 8px;
     border-radius: 4px;
-    background: #1c1c24;
+    background: linear-gradient(90deg, #1c1c24 0%, #121216 100%);
     outline: none;
-    border: 1px solid var(--color-border);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
 }
 
 .porsche-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
     border-radius: 50%;
-    background: var(--color-amber-gold);
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #d09e3a 40%, #8b641d 85%, #422d05 100%);
     cursor: pointer;
-    border: 2px solid #ffffff;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-    transition: transform 0.1s ease;
+    border: 1px solid #111115;
+    box-shadow: 0 0 8px rgba(208, 158, 58, 0.6), 0 4px 6px rgba(0,0,0,0.4);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .porsche-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.15);
+    transform: scale(1.25);
+    box-shadow: 0 0 14px rgba(208, 158, 58, 0.9), 0 5px 8px rgba(0,0,0,0.5);
 }
 
 body.theme-sport .porsche-slider::-webkit-slider-thumb {
-    background: var(--color-guards-red);
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #d5001c 40%, #900010 85%, #400004 100%);
+    box-shadow: 0 0 8px rgba(213, 0, 28, 0.6), 0 4px 6px rgba(0,0,0,0.4);
 }
 
-/* Large Switch Toggle */
+body.theme-sport .porsche-slider::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 14px rgba(213, 0, 28, 0.9), 0 5px 8px rgba(0,0,0,0.5);
+}
+
+/* Mechanical Tactical Toggle Switch */
 .toggle-row-large {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
+    padding: 15px 0;
     border-top: 1px dashed var(--color-border);
     border-bottom: 1px dashed var(--color-border);
 }
@@ -2850,15 +2929,15 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
 }
 
 .toggle-label-large i {
-    margin-right: 5px;
+    margin-right: 6px;
     color: var(--color-text-grey);
 }
 
 .porsche-switch-large {
     position: relative;
     display: inline-block;
-    width: 62px;
-    height: 32px;
+    width: 68px;
+    height: 34px;
 }
 
 .porsche-switch-large input {
@@ -2874,33 +2953,38 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: #1c1c24;
-    border: 1px solid var(--color-border);
-    transition: .4s;
+    background-color: #0f0f12;
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     border-radius: 34px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8);
 }
 
 .switch-slider-large:before {
     position: absolute;
     content: "";
-    height: 24px;
-    width: 24px;
-    left: 3px;
+    height: 26px;
+    width: 26px;
+    left: 4px;
     bottom: 3px;
-    background-color: var(--color-text-grey);
-    transition: .4s;
+    background: radial-gradient(circle at 35% 35%, #7a7a85 0%, #3a3a45 60%, #1e1e24 100%);
+    border: 1px solid #111113;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     border-radius: 50%;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5);
 }
 
 .porsche-switch-large input:checked + .switch-slider-large {
-    background-color: rgba(136, 212, 19, 0.15);
-    border-color: #88d413;
+    background-color: rgba(136, 212, 19, 0.08);
+    border-color: rgba(136, 212, 19, 0.5);
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8), 0 0 10px rgba(136, 212, 19, 0.15);
 }
 
 .porsche-switch-large input:checked + .switch-slider-large:before {
-    transform: translateX(30px);
-    background-color: #88d413;
-    box-shadow: 0 0 10px rgba(136, 212, 19, 0.5);
+    transform: translateX(32px);
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, #88d413 50%, #4c7c07 90%, #213a02 100%);
+    border-color: #55870a;
+    box-shadow: 0 0 12px rgba(136, 212, 19, 0.85), 0 3px 6px rgba(0,0,0,0.5);
 }
 
 /* Interactive Buttons */
@@ -2913,9 +2997,8 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     border: none;
-    text-transform: uppercase;
 }
 
 .btn-primary-large {
@@ -2925,12 +3008,13 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
     color: #fff;
     font-size: 14px;
     letter-spacing: 0.5px;
+    box-shadow: 0 4px 15px rgba(213, 0, 28, 0.25);
 }
 
 .btn-primary-large:hover {
     background-color: var(--color-guards-red-hover);
-    box-shadow: 0 0 15px rgba(213, 0, 28, 0.4);
-    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(213, 0, 28, 0.45);
+    transform: translateY(-2px) scale(1.01);
 }
 
 .btn-warn-large {
@@ -2939,12 +3023,14 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
     border: 1px solid var(--color-guards-red) !important;
     color: var(--color-guards-red);
     font-size: 13px;
+    box-shadow: 0 4px 10px rgba(213, 0, 28, 0.05);
 }
 
 .btn-warn-large:hover {
     background-color: var(--color-guards-red);
     color: #fff;
-    box-shadow: 0 0 12px rgba(213, 0, 28, 0.3);
+    box-shadow: 0 6px 18px rgba(213, 0, 28, 0.3);
+    transform: translateY(-2px) scale(1.015);
 }
 
 .btn-success-large {
@@ -2953,12 +3039,14 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
     border: 1px solid #88d413 !important;
     color: #88d413;
     font-size: 13px;
+    box-shadow: 0 4px 10px rgba(136, 212, 19, 0.05);
 }
 
 .btn-success-large:hover {
     background-color: #88d413;
     color: #0c0c0e;
-    box-shadow: 0 0 12px rgba(136, 212, 19, 0.3);
+    box-shadow: 0 6px 18px rgba(136, 212, 19, 0.3);
+    transform: translateY(-2px) scale(1.015);
 }
 
 /* CAN Terminal Panel */
@@ -2979,12 +3067,23 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
 
 .terminal-container {
     position: relative;
-    background: #060608;
-    border: 1px solid var(--color-border);
+    background: radial-gradient(circle, #09120e 0%, #030604 100%);
+    border: 1px solid rgba(29, 209, 161, 0.2);
     border-radius: 8px;
     padding: 18px;
     overflow: hidden;
-    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9);
+    box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.95), 0 0 15px rgba(29, 209, 161, 0.05);
+}
+
+.terminal-container::before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(29, 209, 161, 0.02) 1px, transparent 1px), linear-gradient(rgba(29, 209, 161, 0.02) 1px, transparent 1px);
+    background-size: 100% 4px, 20px 20px, 20px 20px;
+    z-index: 11;
+    pointer-events: none;
 }
 
 .terminal-scanlines {
@@ -2993,11 +3092,7 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(
-        rgba(18, 16, 16, 0) 50%, 
-        rgba(0, 0, 0, 0.25) 50%
-    );
-    background-size: 100% 4px;
+    background: transparent;
     pointer-events: none;
     z-index: 10;
 }
@@ -3012,7 +3107,9 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
     line-height: 1.6;
     margin: 0;
     white-space: pre-wrap;
-    text-shadow: 0 0 4px rgba(29, 209, 161, 0.4);
+    text-shadow: 0 0 6px rgba(29, 209, 161, 0.65);
+    position: relative;
+    z-index: 5;
 }
 
 /* Custom terminal scrollbar */
@@ -3020,10 +3117,10 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
     width: 6px;
 }
 .can-terminal::-webkit-scrollbar-track {
-    background: #060608;
+    background: #030604;
 }
 .can-terminal::-webkit-scrollbar-thumb {
-    background: #1a1a24;
+    background: #12281e;
     border-radius: 3px;
 }
 .can-terminal::-webkit-scrollbar-thumb:hover {
@@ -3059,7 +3156,7 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
 
 .dtc-item.ok-status i {
     font-size: 16px;
-    animation: none;
+    animation: ok-pulse-dot 2s infinite ease-in-out;
 }
 
 .dtc-item.error-status {
@@ -3087,13 +3184,18 @@ body.theme-sport .porsche-slider::-webkit-slider-thumb {
 }
 
 @keyframes dtc-glow-pulse {
-    0% { border-color: rgba(213, 0, 28, 0.2); }
-    100% { border-color: rgba(213, 0, 28, 0.45); }
+    0% { border-color: rgba(213, 0, 28, 0.2); box-shadow: 0 0 5px rgba(213, 0, 28, 0.05); }
+    100% { border-color: rgba(213, 0, 28, 0.5); box-shadow: 0 0 15px rgba(213, 0, 28, 0.15); }
 }
 
 @keyframes warning-flicker {
     0%, 100% { opacity: 1; }
-    50% { opacity: 0.45; }
+    50% { opacity: 0.35; }
+}
+
+@keyframes ok-pulse-dot {
+    0%, 100% { transform: scale(1); opacity: 0.75; }
+    50% { transform: scale(1.1); opacity: 1; filter: drop-shadow(0 0 4px #88d413); }
 }
 
 /* ==========================================

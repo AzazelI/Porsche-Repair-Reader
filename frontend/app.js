@@ -322,9 +322,21 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             required: ["tool_number", "name_en", "name_ka"]
           }
+        },
+        fluid_capacities: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name_en: { type: "string" },
+              name_ka: { type: "string" },
+              quantity: { type: "string" }
+            },
+            required: ["name_en", "name_ka", "quantity"]
+          }
         }
       },
-      required: ["title_en", "title_ka", "model_name", "labor_time", "parts", "steps", "special_tools"]
+      required: ["title_en", "title_ka", "model_name", "labor_time", "parts", "steps", "special_tools", "fluid_capacities"]
     };
 
     const GWEN_SYSTEM_INSTRUCTION_FRONTEND = 
@@ -621,8 +633,8 @@ ${text}`;
             headers["X-Gemini-API-Key"] = savedApiKey;
         }
 
-        // Call FastAPI Backend
-        fetch(`${savedApiUrl}/analyze-instruction`, {
+        // Call FastAPI Backend (force_refresh=true ensures fluid_capacities are extracted fresh)
+        fetch(`${savedApiUrl}/analyze-instruction?force_refresh=true`, {
             method: "POST",
             headers: headers,
             body: formData
@@ -853,6 +865,28 @@ ${text}`;
             });
         } else {
             toolsContainer.innerHTML = "<p class='no-data-card'>სპეციალური ხელსაწყოები არ არის საჭირო.</p>";
+        }
+
+        // 5. Render Fluid Capacities
+        const fluidsContainer = document.getElementById("fluids-container");
+        if (fluidsContainer) {
+            fluidsContainer.innerHTML = "";
+            if (data.fluid_capacities && data.fluid_capacities.length > 0) {
+                data.fluid_capacities.forEach(fluid => {
+                    const row = document.createElement("div");
+                    row.className = "fluid-row";
+                    row.innerHTML = `
+                        <div class="fluid-info">
+                            <span class="fluid-name-ka">${fluid.name_ka}</span>
+                            <span class="fluid-name-en">${fluid.name_en}</span>
+                        </div>
+                        <span class="fluid-quantity">${fluid.quantity}</span>
+                    `;
+                    fluidsContainer.appendChild(row);
+                });
+            } else {
+                fluidsContainer.innerHTML = "<p class='no-data-card'>სითხეების მოცულობები მითითებული არ არის.</p>";
+            }
         }
     }
 
@@ -2054,11 +2088,16 @@ ${text}`;
         // Speed progress arc dashoffset: map 0-350 km/h -> 360 to 0 dashoffset
         const speedArc = document.getElementById("obd-speed-arc");
         const speedValSpan = document.getElementById("obd-speed-val");
+        const speedNeedle = document.getElementById("obd-speed-needle-group");
         
         if (speedArc) {
             const speedPercent = obdState.speed / 350;
             const offset = 360 - (speedPercent * 360);
             speedArc.style.strokeDashoffset = offset;
+        }
+        if (speedNeedle) {
+            const angle = -120 + (obdState.speed / 350) * 240;
+            speedNeedle.style.transform = `rotate(${angle}deg)`;
         }
         if (speedValSpan) {
             speedValSpan.textContent = Math.round(obdState.speed);

@@ -156,9 +156,22 @@ GEMINI_SCHEMA = {
                 "required": ["tool_number", "name_en", "name_ka"]
             },
             "description": "List of special tools required for this repair."
+        },
+        "fluid_capacities": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name_en": {"type": "string", "description": "Name/description of the fluid in English, e.g. 'Engine Oil', 'CVT Belt Spray', 'Coolant G12++'."},
+                    "name_ka": {"type": "string", "description": "Name of the fluid translated in Georgian."},
+                    "quantity": {"type": "string", "description": "Fill quantity with unit exactly as written in the document, e.g. '2,55 l', '0,5 kg', '150 ml'. Preserve European comma decimal notation."}
+                },
+                "required": ["name_en", "name_ka", "quantity"]
+            },
+            "description": "List of all fluid, oil, grease, spray, or coolant fill capacities mentioned in the document."
         }
     },
-    "required": ["title_en", "title_ka", "model_name", "labor_time", "key_details_en", "key_details_ka", "parts", "steps", "special_tools"]
+    "required": ["title_en", "title_ka", "model_name", "labor_time", "key_details_en", "key_details_ka", "parts", "steps", "special_tools", "fluid_capacities"]
 }
 
 def _has_embedded_images(pdf_path: str) -> bool:
@@ -629,7 +642,8 @@ def analyze_with_gemini(text: str, api_key: str, model_name: str = "gemini-2.5-f
         "4. Extract required parts and consumables (with statuses set to 'renew'). For parts without part numbers, set part_number to 'N/A' or find it in the text (e.g., 18 21 9 062 599 for Optimoly TA).\n"
         "5. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests, engine start suppression checks, or diagnostic checklists (such as extending side stands, testing automated shift assistants, or pulling clutch levers) to avoid cluttering the timeline with dozens of repetitive, non-mechanical testing bullet points. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). Translate each step accurately using the Automotive Glossary above.\n"
         "6. Extract safety warnings or torque specs associated with steps.\n"
-        "7. Extract Special Tools required (e.g. rear-wheel stand, WE-1200).\n\n"
+        "7. Extract Special Tools required (e.g. rear-wheel stand, WE-1200).\n"
+        "8. Extract ALL fluid fill capacities (oils, coolants, greases, sprays, fluids). For each entry list: the fluid name in English, its Georgian translation, and the exact fill quantity with unit as written in the document (e.g. '2,55 l', '0,5 kg', '150 ml'). Preserve European comma decimal notation. If none are mentioned, return an empty array.\n\n"
         f"Repair Instruction Text:\n{text}"
     )
 
@@ -850,6 +864,7 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
         "5. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests, engine start suppression checks, or diagnostic checklists (such as extending side stands, testing automated shift assistants, or pulling clutch levers) to avoid cluttering the timeline with dozens of repetitive, non-mechanical testing bullet points. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). Translate each step accurately using the Automotive Glossary above.\n"
         "6. Extract safety warnings or torque specs associated with steps.\n"
         "7. Extract Special Tools required.\n"
+        "8. Extract ALL fluid fill capacities (oils, coolants, greases, sprays). For each entry list: the fluid name in English, its Georgian translation, and the exact fill quantity with unit as written in the document (e.g. '2,55 l', '0,5 kg'). Read table cells carefully — values like '2,55 l' often appear in narrow columns. Preserve European comma decimal notation. If none are mentioned, return an empty array.\n"
     )
 
     parts = [
