@@ -9,7 +9,7 @@ import time
 import re
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
 import fitz  # PyMuPDF for 10x-50x faster PDF parsing
@@ -161,6 +161,18 @@ GEMINI_SCHEMA = {
     "required": ["title_en", "title_ka", "model_name", "labor_time", "key_details_en", "key_details_ka", "parts", "steps", "special_tools"]
 }
 
+def _has_embedded_images(pdf_path: str) -> bool:
+    """Returns True if any page in the PDF contains embedded image objects."""
+    try:
+        doc = fitz.open(pdf_path)
+        try:
+            return any(page.get_images() for page in doc)
+        finally:
+            doc.close()
+    except Exception:
+        return False
+
+
 def smart_should_skip_page(page_text: str, page_index: int, total_pages: int) -> bool:
     """
     Analyzes page text and determines if it is a non-technical cover page, Table of Contents, 
@@ -168,8 +180,19 @@ def smart_should_skip_page(page_text: str, page_index: int, total_pages: int) ->
     """
     if not page_text:
         return True
-        
+
     stripped = page_text.strip()
+
+    # Never skip pages that look like tables — torque specs and fluid capacities live there
+    if stripped.count("|") >= 3:
+        return False
+    numeric_dense_lines = sum(
+        1 for ln in stripped.split("\n")
+        if len(re.findall(r'\b\d+[,.]?\d*\b', ln)) >= 3
+    )
+    if numeric_dense_lines >= 3:
+        return False
+
     if len(stripped) < 150:
         logger.info(f"Skipping page {page_index+1} (extremely short content, {len(stripped)} chars).")
         return True
@@ -750,24 +773,19 @@ def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.3-70b-
         logger.error(f"General Error during Groq analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def render_pdf_to_jpeg_b64(pdf_path: str, dpi: int = 200, max_pages: int = 10,
-                           quality: int = 90, max_payload_mb: float = 4.5) -> list:
-    """Render PDF pages to grayscale JPEGs (base64) for Gemini Vision.
+def render_pdf_to_png_b64(pdf_path: str, dpi: int = 200, max_pages: int = 20,
+                          max_payload_mb: float = 18.0) -> list:
+    """Render PDF pages to lossless grayscale PNGs (base64) for Gemini Vision at 200 DPI.
 
-    Used for image-only / scanned PDFs where get_text() yields nothing. Sending
-    the raw PDF let Gemini render it internally at low resolution, which dropped
-    small table values that are split into tiny image fragments inside narrow
-    cells (e.g. coolant capacity "2,55 l"). A high-DPI local grayscale raster
-    keeps those digits as continuous, legible pixels so OCR no longer loses them.
-
-    Grayscale roughly thirds the size vs RGB (digits don't need colour), letting
-    us afford higher DPI. DPI is stepped down adaptively to keep the whole
-    request under max_payload_mb (avoids API gateway limits / timeouts / 429s)."""
+    PNG is lossless so tiny table cell values (e.g. '2,55 l', torque specs) are never
+    smeared by JPEG compression artefacts. Grayscale keeps file size manageable vs RGB.
+    DPI is stepped down adaptively only when the total base64 payload would exceed
+    max_payload_mb to stay within Gemini's API request-size limit."""
     doc = fitz.open(pdf_path)
     total = len(doc)
     n = min(total, max_pages)
     if total > max_pages:
-        logger.warning(f"Image-only PDF has {total} pages; rendering first {max_pages} "
+        logger.warning(f"PDF has {total} pages; rendering first {max_pages} "
                        f"to cap payload size and API quota usage.")
     images = []
     try:
@@ -775,10 +793,10 @@ def render_pdf_to_jpeg_b64(pdf_path: str, dpi: int = 200, max_pages: int = 10,
             images = []
             for i in range(n):
                 pix = doc[i].get_pixmap(dpi=attempt_dpi, colorspace=fitz.csGRAY)
-                jpeg_bytes = pix.tobytes("jpeg", jpg_quality=quality)
-                images.append(base64.b64encode(jpeg_bytes).decode("utf-8"))
+                png_bytes = pix.tobytes("png")
+                images.append(base64.b64encode(png_bytes).decode("utf-8"))
             size_mb = sum(len(b) for b in images) / 1048576
-            logger.info(f"Rendered {len(images)} page(s) to grayscale JPEG @ {attempt_dpi} DPI "
+            logger.info(f"Rendered {len(images)} page(s) to grayscale PNG @ {attempt_dpi} DPI "
                         f"(~{size_mb:.2f} MB base64).")
             if size_mb <= max_payload_mb:
                 break
@@ -797,11 +815,10 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
             detail="Gemini API Key is missing."
         )
 
-    # Render pages to grayscale JPEGs instead of shipping the raw PDF. Gemini's
-    # internal PDF rasteriser runs at low DPI and silently drops small fragmented
-    # table numbers (e.g. "2,55 l"); a local high-DPI raster preserves them.
+    # Render pages to lossless grayscale PNGs. PNG preserves tiny table cell values
+    # (torque specs, fluid capacities) that JPEG compression can smear or drop.
     try:
-        page_images = render_pdf_to_jpeg_b64(pdf_path)
+        page_images = render_pdf_to_png_b64(pdf_path)
         if not page_images:
             raise ValueError("No pages were rendered from the PDF.")
     except Exception as e:
@@ -836,7 +853,7 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
     )
 
     parts = [
-        {"inlineData": {"mimeType": "image/jpeg", "data": img}}
+        {"inlineData": {"mimeType": "image/png", "data": img}}
         for img in page_images
     ]
     parts.append({"text": prompt})
@@ -890,7 +907,8 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
 async def analyze_instruction(
     file: UploadFile = File(...),
     x_gemini_api_key: Optional[str] = Header(None),
-    x_groq_api_key: Optional[str] = Header(None)
+    x_groq_api_key: Optional[str] = Header(None),
+    force_refresh: bool = Query(False, description="Bypass cache and force fresh analysis")
 ):
     """
     Uploads a Porsche Repair Instruction PDF, extracts the text, 
@@ -916,29 +934,31 @@ async def analyze_instruction(
         cache_file = os.path.join(cache_dir, f"{file_hash}.json")
         
         cached_data = None
-        # Check local cache first (super fast)
-        if os.path.exists(cache_file):
-            try:
-                with open(cache_file, "r", encoding="utf-8") as f:
-                    cached_data = json.load(f)
-                logger.info(f"Local Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
-            except Exception as ce:
-                logger.error(f"Error reading local cached file: {ce}. Falling back to persistent cache check.")
-                
-        # If local cache missed/failed, check persistent Supabase Storage cache
-        if not cached_data:
-            cached_data = get_cached_analysis_from_supabase(file_hash)
-            if cached_data:
-                # Save it locally for future hits
+        if not force_refresh:
+            # Check local cache first (super fast)
+            if os.path.exists(cache_file):
                 try:
-                    with open(cache_file, "w", encoding="utf-8") as f:
-                        json.dump(cached_data, f, ensure_ascii=False, indent=2)
-                    logger.info(f"Saved downloaded cache locally for hash: {file_hash}")
-                except Exception as cse:
-                    logger.error(f"Failed to write downloaded cache locally: {cse}")
-                    
+                    with open(cache_file, "r", encoding="utf-8") as f:
+                        cached_data = json.load(f)
+                    logger.info(f"Local Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
+                except Exception as ce:
+                    logger.error(f"Error reading local cached file: {ce}. Falling back to persistent cache check.")
+
+            # If local cache missed/failed, check persistent Supabase Storage cache
+            if not cached_data:
+                cached_data = get_cached_analysis_from_supabase(file_hash)
+                if cached_data:
+                    try:
+                        with open(cache_file, "w", encoding="utf-8") as f:
+                            json.dump(cached_data, f, ensure_ascii=False, indent=2)
+                        logger.info(f"Saved downloaded cache locally for hash: {file_hash}")
+                    except Exception as cse:
+                        logger.error(f"Failed to write downloaded cache locally: {cse}")
+        else:
+            logger.info(f"force_refresh=True: bypassing cache for hash {file_hash}")
+
         if cached_data:
-            return cached_data
+            return {**cached_data, "file_hash": file_hash, "_cache_hit": True}
 
         # 3. Extract text from the PDF
         logger.info(f"Extracting text from PDF: {file.filename}")
@@ -947,42 +967,60 @@ async def analyze_instruction(
         structured_data = None
         last_error = None
 
+        # Determine vision mode once — used in both the Gemini and Groq paths
+        _text_stripped = extracted_text.strip()
+        use_vision = len(_text_stripped) < 100
+        if not use_vision:
+            try:
+                with fitz.open(temp_file_path) as _doc:
+                    _page_count = max(1, len(_doc))
+            except Exception:
+                _page_count = 1
+            _avg_chars = len(_text_stripped) / _page_count
+            # Hybrid: text is sparse AND the PDF carries embedded image objects
+            # (tables rendered as images lose their text in get_text)
+            use_hybrid_vision = _avg_chars < 300 and _has_embedded_images(temp_file_path)
+        else:
+            use_hybrid_vision = False
+
+        if use_vision:
+            logger.info("Vision mode: extracted text is empty/too short — using Vision API.")
+        elif use_hybrid_vision:
+            logger.info(f"Hybrid vision mode: avg {_avg_chars:.0f} chars/page + embedded images detected.")
+
         # 4. Try Gemini Provider first (with smart model-then-key pool scheduling)
         gemini_keys = get_all_gemini_api_keys(x_gemini_api_key)
         if gemini_keys:
             # We try the best models in order, but rotate keys first on failures to avoid 429/timeout cascades!
             models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
-            
+
             for model_name in models_to_try:
                 if structured_data:
                     break
                 logger.info(f"=== Broad Phase: Trying model '{model_name}' across all available keys ===")
-                
+
                 for attempt, api_key in enumerate(gemini_keys):
                     masked_key = api_key[:10] + "..." if len(api_key) > 10 else api_key
                     logger.info(f"Attempting model '{model_name}' using key {attempt + 1}/{len(gemini_keys)} (masked: {masked_key})")
-                    
+
                     try:
-                        # If extracted text is empty or extremely short, fallback to direct PDF Vision parsing
-                        if len(extracted_text.strip()) < 100:
-                            logger.info("Extracted text is empty or too short. Falling back to direct PDF Vision parsing...")
+                        if use_vision or use_hybrid_vision:
                             structured_data = analyze_pdf_directly_with_gemini(temp_file_path, api_key, model_name, extracted_text)
                         else:
                             logger.info(f"Analyzing text with model '{model_name}' Structured Output API")
                             structured_data = analyze_with_gemini(extracted_text, api_key, model_name)
-                        
+
                         logger.info(f"Gemini analysis successful using model '{model_name}' and key {attempt + 1}!")
-                        break # Break out of the keys loop since we succeeded!
+                        break  # Break out of the keys loop since we succeeded!
                     except Exception as e:
                         logger.warning(f"Model '{model_name}' failed with key {masked_key}: {e}")
                         last_error = e
-                        # Continue to the next key for this model
                         continue
 
         # 5. Groq Provider Fallback (if Gemini failed or no Gemini keys configured)
         if not structured_data:
-            if len(extracted_text.strip()) < 100:
-                logger.warning("Extracted text is too short for Groq fallback (likely scanned image PDF). Skipping Groq.")
+            if use_vision or use_hybrid_vision:
+                logger.warning("Vision-mode PDF cannot fall back to Groq (no image support).")
                 raise HTTPException(
                     status_code=502,
                     detail="Gemini API-ს კვოტა ამოწურულია. ატვირთული ფაილი არის დასკანერებული სურათი (ვიზუალური PDF), რომლის წასაკითხადაც აუცილებელია Gemini-ს კამერის/OCR მხარდაჭერა. Groq-ს არ შეუძლია სურათების დამუშავება."
@@ -1038,8 +1076,8 @@ async def analyze_instruction(
             upload_to_supabase(temp_file_path, model_name, repair_title)
         except Exception as se:
             logger.error(f"Failed to upload to Supabase: {se}")
-            
-        return structured_data
+
+        return {**structured_data, "file_hash": file_hash}
 
     finally:
         # Clean up temp file
