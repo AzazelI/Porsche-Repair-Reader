@@ -633,7 +633,8 @@ def analyze_with_gemini(text: str, api_key: str, model_name: str = "gemini-2.5-f
         "2. REQUIRED & OPTIONAL PARTS (RENEW & IF NECESSARY): Extract two types of parts/consumables: (a) Mandatory replacements/applications explicitly marked as 'Renew', 'Replace', or lubricants/grease that must be applied; set their status to 'renew'. (b) Optional replacements explicitly marked as 'if necessary', 'renew if necessary', 'replace if necessary', or 'for damage'; set their status to 'if_necessary'. Reusable hardware like standard screws or washers that are simply 'removed' and 'installed' without any replacement instruction must NOT be extracted. Also, always include the main subject of the instruction (e.g., the CVT belt or the silencer itself) with 'renew' status since it is being replaced.\n"
         "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: You must translate technical steps and parts using standard dealer-level Georgian automotive workshop terminology. Avoid literal translations at all costs!\n"
         "   Apply this strict Automotive Glossary:\n"
-        f"{glossary_text}\n\n"
+        f"{glossary_text}\n"
+        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n\n"
         
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
@@ -725,7 +726,8 @@ def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.3-70b-
         "2. PARTS (RENEW/IF NECESSARY): Extract parts for replacement: (a) Mandatory replacements ('Renew', 'Replace', lubricants/grease) as 'renew'; (b) Optional replacements ('if necessary', 'for damage') as 'if_necessary'. Reusable hardware simply removed/installed without replacement instruction must NOT be extracted. Always include the main subject with 'renew' status.\n"
         "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: Use standard dealer-level Georgian automotive terminology. Avoid literal translations!\n"
         "   Strictly apply this Automotive Glossary:\n"
-        f"{glossary_text}\n\n"
+        f"{glossary_text}\n"
+        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n\n"
         
         "JSON SCHEMA:\n"
         f"{json.dumps(GEMINI_SCHEMA, ensure_ascii=False)}\n\n"
@@ -854,7 +856,8 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
         "2. REQUIRED & OPTIONAL PARTS (RENEW & IF NECESSARY): Extract two types of parts/consumables: (a) Mandatory replacements/applications explicitly marked as 'Renew', 'Replace', or lubricants/grease that must be applied; set their status to 'renew'. (b) Optional replacements explicitly marked as 'if necessary', 'renew if necessary', 'replace if necessary', or 'for damage'; set their status to 'if_necessary'. Reusable hardware like standard screws or washers that are simply 'removed' and 'installed' without any replacement instruction must NOT be extracted. Also, always include the main subject of the instruction (e.g., the CVT belt or the silencer itself) with 'renew' status since it is being replaced.\n"
         "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: You must translate technical steps and parts using standard dealer-level Georgian automotive workshop terminology. Avoid literal translations at all costs!\n"
         "   Apply this strict Glossary:\n"
-        f"{glossary_text}\n\n"
+        f"{glossary_text}\n"
+        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n\n"
         
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
