@@ -957,21 +957,30 @@ async def analyze_instruction(
             if os.path.exists(cache_file):
                 try:
                     with open(cache_file, "r", encoding="utf-8") as f:
-                        cached_data = json.load(f)
-                    logger.info(f"Local Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
+                        temp_cache = json.load(f)
+                    # Enforce that the cached entry has the new fluid_capacities field
+                    if temp_cache and "fluid_capacities" in temp_cache:
+                        cached_data = temp_cache
+                        logger.info(f"Local Cache HIT for hash {file_hash}. Returning cached analysis immediately!")
+                    else:
+                        logger.info(f"Local cache for hash {file_hash} is outdated (missing 'fluid_capacities'). Ignoring local cache.")
                 except Exception as ce:
                     logger.error(f"Error reading local cached file: {ce}. Falling back to persistent cache check.")
 
-            # If local cache missed/failed, check persistent Supabase Storage cache
+            # If local cache missed/failed/outdated, check persistent Supabase Storage cache
             if not cached_data:
-                cached_data = get_cached_analysis_from_supabase(file_hash)
-                if cached_data:
-                    try:
-                        with open(cache_file, "w", encoding="utf-8") as f:
-                            json.dump(cached_data, f, ensure_ascii=False, indent=2)
-                        logger.info(f"Saved downloaded cache locally for hash: {file_hash}")
-                    except Exception as cse:
-                        logger.error(f"Failed to write downloaded cache locally: {cse}")
+                temp_cache = get_cached_analysis_from_supabase(file_hash)
+                if temp_cache:
+                    if "fluid_capacities" in temp_cache:
+                        cached_data = temp_cache
+                        try:
+                            with open(cache_file, "w", encoding="utf-8") as f:
+                                json.dump(cached_data, f, ensure_ascii=False, indent=2)
+                            logger.info(f"Saved downloaded cache locally for hash: {file_hash}")
+                        except Exception as cse:
+                            logger.error(f"Failed to write downloaded cache locally: {cse}")
+                    else:
+                        logger.info(f"Supabase cache for hash {file_hash} is outdated (missing 'fluid_capacities'). Ignoring cache.")
         else:
             logger.info(f"force_refresh=True: bypassing cache for hash {file_hash}")
 

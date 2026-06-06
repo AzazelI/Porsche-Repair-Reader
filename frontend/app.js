@@ -633,8 +633,8 @@ ${text}`;
             headers["X-Gemini-API-Key"] = savedApiKey;
         }
 
-        // Call FastAPI Backend (force_refresh=true ensures fluid_capacities are extracted fresh)
-        fetch(`${savedApiUrl}/analyze-instruction?force_refresh=true`, {
+        // Call FastAPI Backend (cache is used by default)
+        fetch(`${savedApiUrl}/analyze-instruction`, {
             method: "POST",
             headers: headers,
             body: formData
