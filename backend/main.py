@@ -1034,8 +1034,10 @@ async def analyze_instruction(
 
         # 5. Groq Provider Fallback (if Gemini failed or no Gemini keys configured)
         if not structured_data:
-            if use_vision or use_hybrid_vision:
-                logger.warning("Vision-mode PDF cannot fall back to Groq (no image support).")
+            # We only block Groq fallback if the PDF is purely visual (use_vision=True, meaning < 100 characters extracted).
+            # In use_hybrid_vision, we have some extractable text, so we can try Groq text-fallback!
+            if use_vision:
+                logger.warning("Pure visual visual PDF cannot fall back to Groq (no image support).")
                 raise HTTPException(
                     status_code=502,
                     detail="Gemini API-ს კვოტა ამოწურულია. ატვირთული ფაილი არის დასკანერებული სურათი (ვიზუალური PDF), რომლის წასაკითხადაც აუცილებელია Gemini-ს კამერის/OCR მხარდაჭერა. Groq-ს არ შეუძლია სურათების დამუშავება."
