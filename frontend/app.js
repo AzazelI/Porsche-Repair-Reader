@@ -875,7 +875,8 @@ ${text}`;
                 data.fluid_capacities.forEach(fluid => {
                     const formattedQty = (fluid.quantity || "")
                         .replace(/(\d+[\d,.]*)\s*l\b/gi, "$1 L")
-                        .replace(/(\d+[\d,.]*)\s*ml\b/gi, "$1 mL");
+                        .replace(/(\d+[\d,.]*)\s*ml\b/gi, "$1 mL")
+                        .replace(/(\d+[\d,.]*)\s+([1il|/I])$/gi, "$1 L");
                     const row = document.createElement("div");
                     row.className = "fluid-row";
                     row.innerHTML = `
