@@ -596,7 +596,8 @@ def upload_cached_analysis_to_supabase(file_hash: str, data: dict):
     headers = {
         "Authorization": f"Bearer {supabase_key}",
         "apikey": supabase_key,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "x-upsert": "true"
     }
     
     try:
