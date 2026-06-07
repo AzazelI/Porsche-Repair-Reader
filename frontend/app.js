@@ -873,6 +873,9 @@ ${text}`;
             fluidsContainer.innerHTML = "";
             if (data.fluid_capacities && data.fluid_capacities.length > 0) {
                 data.fluid_capacities.forEach(fluid => {
+                    const formattedQty = (fluid.quantity || "")
+                        .replace(/(\d+[\d,.]*)\s*l\b/gi, "$1 L")
+                        .replace(/(\d+[\d,.]*)\s*ml\b/gi, "$1 mL");
                     const row = document.createElement("div");
                     row.className = "fluid-row";
                     row.innerHTML = `
@@ -880,7 +883,7 @@ ${text}`;
                             <span class="fluid-name-ka">${fluid.name_ka}</span>
                             <span class="fluid-name-en">${fluid.name_en}</span>
                         </div>
-                        <span class="fluid-quantity">${fluid.quantity}</span>
+                        <span class="fluid-quantity">${formattedQty}</span>
                     `;
                     fluidsContainer.appendChild(row);
                 });
