@@ -10,7 +10,7 @@ import re
 import secrets
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Query, Depends
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Query, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
 import fitz  # PyMuPDF for 10x-50x faster PDF parsing
@@ -102,6 +102,43 @@ def require_admin(x_admin_token: Optional[str] = Header(None)):
         )
     if not x_admin_token or not secrets.compare_digest(x_admin_token, expected):
         raise HTTPException(status_code=403, detail="Invalid or missing X-Admin-Token header.")
+
+# In-memory sliding-window rate limiter (single-instance deployment; no external store needed)
+RATE_LIMIT_BUCKETS = {}  # {(scope, client_ip): [request timestamps]}
+RATE_LIMIT_MAX_TRACKED_CLIENTS = 10000
+
+def _client_ip(request: Request) -> str:
+    """Resolves the real client IP behind the Hugging Face / Cloudflare proxy chain."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def rate_limit(scope: str, max_requests: int, window_seconds: int):
+    """
+    Returns a FastAPI dependency enforcing max_requests per window_seconds per client IP.
+    Protects the shared Gemini/Groq key pool from being drained by a single client.
+    """
+    def dependency(request: Request):
+        now = time.monotonic()
+        key = (scope, _client_ip(request))
+        bucket = RATE_LIMIT_BUCKETS.setdefault(key, [])
+        cutoff = now - window_seconds
+        bucket[:] = [t for t in bucket if t > cutoff]
+        if len(bucket) >= max_requests:
+            retry_after = max(1, int(bucket[0] + window_seconds - now) + 1)
+            logger.warning(f"Rate limit hit: scope='{scope}' ip='{key[1]}' ({max_requests}/{window_seconds}s)")
+            raise HTTPException(
+                status_code=429,
+                detail=f"Rate limit exceeded: max {max_requests} requests per {window_seconds} seconds. Try again later.",
+                headers={"Retry-After": str(retry_after)}
+            )
+        bucket.append(now)
+        # Opportunistic cleanup so the bucket dict cannot grow unbounded
+        if len(RATE_LIMIT_BUCKETS) > RATE_LIMIT_MAX_TRACKED_CLIENTS:
+            for k in [k for k, v in RATE_LIMIT_BUCKETS.items() if not v or v[-1] <= cutoff]:
+                RATE_LIMIT_BUCKETS.pop(k, None)
+    return dependency
 
 # Enable CORS for frontend integration
 app.add_middleware(
@@ -937,7 +974,10 @@ def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: st
         logger.error(f"General Error during Gemini direct PDF analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/analyze-instruction")
+@app.post("/analyze-instruction", dependencies=[
+    Depends(rate_limit("analyze-burst", 6, 60)),      # 6 uploads per minute
+    Depends(rate_limit("analyze-sustained", 40, 3600)) # 40 uploads per hour
+])
 async def analyze_instruction(
     file: UploadFile = File(...),
     x_gemini_api_key: Optional[str] = Header(None),
@@ -1490,7 +1530,10 @@ def call_groq_chat(prompt: str, system_instruction: str, api_key: str, model_nam
         raise Exception("No choices returned from Groq.")
     return choices[0].get("message", {}).get("content", "")
 
-@app.post("/gwen-chat")
+@app.post("/gwen-chat", dependencies=[
+    Depends(rate_limit("chat-burst", 10, 60)),        # 10 messages per minute
+    Depends(rate_limit("chat-sustained", 120, 3600))  # 120 messages per hour
+])
 async def gwen_chat(
     request: GwenChatRequest,
     x_gemini_api_key: Optional[str] = Header(None),
@@ -1576,7 +1619,7 @@ async def gwen_chat(
         
     return {"response": response_text}
 
-@app.post("/cache-local-analysis")
+@app.post("/cache-local-analysis", dependencies=[Depends(rate_limit("cache-write", 10, 60))])
 async def cache_local_analysis(request: CacheLocalRequest):
     """
     Caches a successfully generated local Ollama analysis on the backend 
