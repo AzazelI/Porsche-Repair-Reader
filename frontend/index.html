@@ -19,7 +19,7 @@
     <!-- Top Premium Navbar -->
     <header class="porsche-navbar">
         <div class="logo-area">
-            <img id="logo-porsche" class="logo-porsche" src="https://pngimg.com/uploads/porsche_logo/porsche_logo_PNG1.png" alt="Porsche" style="cursor: pointer;">
+            <img id="logo-porsche" class="logo-porsche" src="https://pngimg.com/uploads/porsche_logo/porsche_logo_PNG1.png" alt="Porsche" style="cursor: pointer;" onerror="this.style.display='none'">
             <span class="brand-porsche">PORSCHE</span>
             <span class="brand-divider">|</span>
             <!-- Custom Native Tegeta Cars Monogram Vector SVG -->
@@ -115,12 +115,13 @@
             <!-- HERO UPLOAD SECTION -->
             <section id="upload-section" class="upload-section">
                 <div class="hero-text">
+                    <span class="hero-kicker">Porsche Aftersales &middot; AI Cockpit</span>
                     <h1>Repair Instruction Reader</h1>
                     <p>სარემონტო ინსტრუქციების ინტელექტუალური ანალიზი. ატვირთეთ PDF მანუალი და მიიღეთ ტექნიკური ნაბიჯების ზუსტი თარგმანი, სათადარიგო ნაწილების სტრუქტურირებული ნუსხა და ნორმა-საათები წამებში.</p>
                 </div>
                 
                 <!-- Drag and Drop Zone -->
-                <div id="drop-zone" class="drop-zone glassmorphism">
+                <div id="drop-zone" class="drop-zone glassmorphism" tabindex="0" role="button" aria-label="ატვირთეთ PDF ფაილი — დააჭირეთ Enter-ს ან გადმოიტანეთ ფაილი">
                     <!-- Laser Scanner Animation Line -->
                     <div class="laser-scanner"></div>
                     <div class="drop-content">
@@ -487,6 +488,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=2.2"></script>
+    <script src="app.js?v=2.3"></script>
 </body>
 </html>

@@ -484,6 +484,14 @@ ${text}`;
         fileInput.click();
     });
 
+    // Keyboard access: drop zone is focusable (tabindex=0), Enter/Space opens the file picker
+    dropZone.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            fileInput.click();
+        }
+    });
+
     fileInput.addEventListener("change", (e) => {
         if (e.target.files.length > 0) {
             handleFileUpload(e.target.files[0]);
@@ -963,10 +971,12 @@ ${text}`;
         updateLiveChrono();
     }
 
-    // Fetch live telemetry data on load to dynamically reflect active API keys count
+    // Fetch live telemetry data on load: real key count, measured round-trip latency, backend status
+    const healthFetchStart = performance.now();
     fetch(`${savedApiUrl}/health`)
     .then(res => res.json())
     .then(data => {
+        const latencyMs = Math.round(performance.now() - healthFetchStart);
         const keyStatusElement = document.querySelector(".telemetry-item:nth-child(2) .telemetry-value");
         if (keyStatusElement && data.total_keys_count !== undefined) {
             const geminiCount = data.gemini_keys_count || 0;
@@ -976,9 +986,28 @@ ${text}`;
             keyStatusElement.setAttribute("title", `Gemini: ${geminiCount} გასაღები, Groq: ${groqCount} გასაღები`);
             keyStatusElement.style.cursor = "help";
         }
+        const latencyElement = document.querySelector(".telemetry-item:nth-child(4) .telemetry-value");
+        if (latencyElement) {
+            const latencyClass = latencyMs < 500 ? "text-green" : (latencyMs < 1500 ? "text-amber" : "text-red");
+            latencyElement.className = `telemetry-value ${latencyClass}`;
+            latencyElement.textContent = `${latencyMs} ms / SECURE SSL`;
+            latencyElement.setAttribute("title", "გაზომილი რეალური Round-Trip დრო ბექენდამდე");
+        }
     })
     .catch(err => {
         console.warn("Failed to fetch live health telemetry:", err);
+        // Reflect the outage honestly in the cockpit instead of showing a fake READY state
+        const engineStatusElement = document.querySelector(".telemetry-item:nth-child(1) .telemetry-value");
+        if (engineStatusElement) {
+            engineStatusElement.className = "telemetry-value text-red";
+            engineStatusElement.innerHTML = `<span class="pulse-dot red"></span> BACKEND OFFLINE`;
+            engineStatusElement.setAttribute("title", "ბექენდი არ პასუხობს — ატვირთვა ვერ იმუშავებს, სანამ კავშირი აღდგება");
+        }
+        const latencyElement = document.querySelector(".telemetry-item:nth-child(4) .telemetry-value");
+        if (latencyElement) {
+            latencyElement.className = "telemetry-value text-red";
+            latencyElement.textContent = "-- ms / NO LINK";
+        }
     });
 
     // ==========================================
