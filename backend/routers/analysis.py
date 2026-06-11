@@ -7,6 +7,7 @@ import httpx
 import pdfplumber
 import fitz  # PyMuPDF
 from typing import Optional, List
+from pydantic import BaseModel
 from fastapi import APIRouter, UploadFile, File, Header, HTTPException, Query, Depends
 from config import rate_limit, require_admin, get_gemini_api_key, get_all_gemini_api_keys, get_groq_api_keys, logger
 from utils.supabase import upload_to_supabase, get_cached_analysis_from_supabase, upload_cached_analysis_to_supabase
@@ -682,3 +683,32 @@ async def clear_cache(file_hash: str):
         "local_cleared": local_cleared,
         "supabase_cleared": supabase_cleared
     }
+
+class CacheLocalRequest(BaseModel):
+    file_hash: str
+    structured_data: dict
+
+@router.post("/cache-local-analysis", dependencies=[Depends(rate_limit("cache-write", 10, 60))])
+async def cache_local_analysis(request: CacheLocalRequest):
+    """
+    Caches a successfully generated local Ollama analysis on the backend
+    for future cache hits (local and Supabase). Called by the frontend after
+    the client-side Ollama fallback completes an analysis.
+    """
+    file_hash = request.file_hash
+    structured_data = request.structured_data
+
+    cache_dir = "cache"
+    os.makedirs(cache_dir, exist_ok=True)
+    cache_file = os.path.join(cache_dir, f"{file_hash}.json")
+
+    try:
+        with open(cache_file, "w", encoding="utf-8") as f:
+            json.dump(structured_data, f, ensure_ascii=False, indent=2)
+        logger.info(f"Saved local fallback analysis to local cache: {cache_file}")
+
+        await upload_cached_analysis_to_supabase(file_hash, structured_data)
+        return {"status": "cached"}
+    except Exception as e:
+        logger.error(f"Failed to write fallback response to cache: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to cache: {str(e)}")
