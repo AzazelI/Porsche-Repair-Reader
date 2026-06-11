@@ -161,9 +161,60 @@ def health_check():
     groq_keys = [k.strip() for k in os.getenv("GROQ_API_KEY", "").split(",") if k.strip()]
     total_keys = len(gemini_keys) + len(groq_keys)
     return {
-        "status": "ok", 
+        "status": "ok",
         "api_key_configured": bool(os.getenv("GEMINI_API_KEY")),
         "gemini_keys_count": len(gemini_keys),
         "groq_keys_count": len(groq_keys),
         "total_keys_count": total_keys
+    }
+
+@router.post("/admin/seed-glossary", dependencies=[Depends(require_admin)])
+async def seed_glossary():
+    """
+    Seeds the technical glossary (glossary.json) into the Supabase technical_glossary table.
+    Moved out of the startup lifespan: run manually (X-Admin-Token required) only when the
+    glossary file actually changes, instead of re-pushing 1000+ rows on every cold start.
+    """
+    from utils.glossary import DEFAULT_GLOSSARY
+
+    supabase_url = os.getenv("SUPABASE_URL", "").strip()
+    supabase_key = os.getenv("SUPABASE_KEY", "").replace("\n", "").replace("\r", "").strip()
+    if not supabase_url or not supabase_key:
+        return {"status": "error", "message": "Supabase URL or Key not set in environment variables."}
+
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "apikey": supabase_key,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates"
+    }
+    url = f"{supabase_url.rstrip('/')}/rest/v1/technical_glossary"
+
+    all_items = [{"term_en": term, "translation_ka": translation}
+                 for term, translation in DEFAULT_GLOSSARY.items()]
+    total_items = len(all_items)
+    logger.info(f"Admin-triggered glossary seed: {total_items} terms to sync.")
+
+    chunk_size = 200
+    seeded_chunks = 0
+    errors = []
+    async with httpx.AsyncClient() as client:
+        for i in range(0, total_items, chunk_size):
+            chunk = all_items[i:i + chunk_size]
+            try:
+                res = await client.post(url, json=chunk, headers=headers, timeout=30)
+                if res.status_code in (200, 201):
+                    seeded_chunks += 1
+                else:
+                    errors.append(f"chunk {i//chunk_size + 1}: {res.status_code} - {res.text[:200]}")
+            except Exception as e:
+                errors.append(f"chunk {i//chunk_size + 1}: {e}")
+
+    status = "success" if not errors else "partial" if seeded_chunks else "error"
+    logger.info(f"Glossary seed finished: {seeded_chunks} chunks OK, {len(errors)} failed.")
+    return {
+        "status": status,
+        "total_terms": total_items,
+        "seeded_chunks": seeded_chunks,
+        "failed_chunks": errors
     }
