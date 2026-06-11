@@ -188,7 +188,7 @@ async def seed_glossary():
         "Content-Type": "application/json",
         "Prefer": "resolution=merge-duplicates"
     }
-    url = f"{supabase_url.rstrip('/')}/rest/v1/technical_glossary"
+    url = f"{supabase_url.rstrip('/')}/rest/v1/technical_glossary?on_conflict=term_en"
 
     all_items = [{"term_en": term, "translation_ka": translation}
                  for term, translation in DEFAULT_GLOSSARY.items()]
