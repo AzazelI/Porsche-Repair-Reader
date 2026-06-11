@@ -7,9 +7,10 @@ import random
 import base64
 import time
 import re
+import secrets
 from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Query
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import pdfplumber
 import fitz  # PyMuPDF for 10x-50x faster PDF parsing
@@ -87,6 +88,20 @@ def startup_event():
             logger.info("Auto-seeding technical glossary completed successfully.")
         except Exception as e:
             logger.error(f"Failed to auto-seed glossary to Supabase: {e}")
+
+def require_admin(x_admin_token: Optional[str] = Header(None)):
+    """
+    Guards diagnostic/admin endpoints (/logs, /test-*, /organize-supabase, /clear-cache).
+    Fails closed: if ADMIN_TOKEN env var is not configured, these endpoints stay disabled.
+    """
+    expected = os.getenv("ADMIN_TOKEN", "").strip()
+    if not expected:
+        raise HTTPException(
+            status_code=503,
+            detail="Admin endpoints are disabled: ADMIN_TOKEN is not configured on the server."
+        )
+    if not x_admin_token or not secrets.compare_digest(x_admin_token, expected):
+        raise HTTPException(status_code=403, detail="Invalid or missing X-Admin-Token header.")
 
 # Enable CORS for frontend integration
 app.add_middleware(
@@ -1114,7 +1129,7 @@ async def analyze_instruction(
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
-@app.get("/test-supabase")
+@app.get("/test-supabase", dependencies=[Depends(require_admin)])
 def test_supabase():
     """Diagnostic endpoint to test Supabase Storage upload and return exact errors."""
     supabase_url = os.getenv("SUPABASE_URL", "").strip()
@@ -1161,7 +1176,7 @@ def test_supabase():
         logger.error(f"Error during Supabase test: {e}")
         return {"status": "error", "message": str(e), "details": details}
 
-@app.get("/organize-supabase")
+@app.get("/organize-supabase", dependencies=[Depends(require_admin)])
 def run_organize_supabase():
     """Trigger Supabase Storage bucket reorganization and cleanup of cache/manuals/test files."""
     try:
@@ -1173,7 +1188,7 @@ def run_organize_supabase():
         logger.error(f"Failed to run Supabase organization: {e}")
         return {"status": "error", "message": str(e)}
 
-@app.get("/test-gemini")
+@app.get("/test-gemini", dependencies=[Depends(require_admin)])
 def test_gemini():
     """Diagnostic endpoint to test all Gemini API keys in the pool and return exact responses."""
     env_keys = os.getenv("GEMINI_API_KEY", "")
@@ -1213,7 +1228,7 @@ def test_gemini():
             
     return {"status": "diagnostics_complete", "results": results}
 
-@app.get("/test-groq")
+@app.get("/test-groq", dependencies=[Depends(require_admin)])
 def test_groq():
     """Diagnostic endpoint to test all Groq API keys in the pool and return exact responses."""
     env_keys = os.getenv("GROQ_API_KEY", "")
@@ -1255,7 +1270,7 @@ def test_groq():
             
     return {"status": "diagnostics_complete", "results": results}
 
-@app.get("/logs")
+@app.get("/logs", dependencies=[Depends(require_admin)])
 def get_logs():
     """Returns the last 150 log lines for active debugging."""
     return {"logs": memory_log_handler.buffer}
@@ -1285,7 +1300,7 @@ def health_check():
         "total_keys_count": total_keys
     }
 
-@app.get("/clear-cache/{file_hash}")
+@app.get("/clear-cache/{file_hash}", dependencies=[Depends(require_admin)])
 def clear_cache(file_hash: str):
     """Deletes cached JSON files locally and in Supabase Storage to force a fresh analysis."""
     cache_file = os.path.join("cache", f"{file_hash}.json")
