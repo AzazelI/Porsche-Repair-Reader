@@ -1106,6 +1106,27 @@ body.porsche-theme {
 }
 
 /* ==========================================
+   PROMO VIDEO SECTION
+   ========================================== */
+.video-section {
+    width: 100%;
+    max-width: 900px;
+    margin: 10px auto;
+}
+
+.video-wrapper {
+    padding: 12px;
+    overflow: hidden;
+}
+
+.video-wrapper video {
+    display: block;
+    width: 100%;
+    border-radius: 8px;
+    background: #000;
+}
+
+/* ==========================================
    PORSCHE PREMIUM DRIVING MODE WIDGET
    ========================================== */
 .porsche-mode-selector {
