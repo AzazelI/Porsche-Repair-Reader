@@ -24,6 +24,16 @@ document.addEventListener("DOMContentLoaded", () => {
     const settingsSave = document.getElementById("settings-save");
     const logoPorsche = document.getElementById("logo-porsche");
     
+    // TU Modal Nodes
+    const tuModal = document.getElementById("tu-modal");
+    const tuClose = document.getElementById("tu-close");
+    const tuInput = document.getElementById("tu-input");
+    const tuLiveCalc = document.getElementById("tu-live-calc");
+    const tuCancel = document.getElementById("tu-cancel");
+    const tuConfirm = document.getElementById("tu-confirm");
+    let pendingFileToUpload = null;
+    let lastEnteredTU = null;
+    
     // Ollama Config Nodes
     const ollamaUrlInput = document.getElementById("ollama-url-input");
     const btnTestOllama = document.getElementById("btn-test-ollama");
@@ -275,6 +285,111 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // ==========================================
+    // TU MODAL LOGIC AND EVENT LISTENERS
+    // ==========================================
+
+    function askForTUAndUpload(file) {
+        if (!file.name.toLowerCase().endsWith(".pdf")) {
+            alert("გთხოვთ ატვირთოთ მხოლოდ PDF ფაილი.");
+            return;
+        }
+        pendingFileToUpload = file;
+        
+        // Reset input field and live calculation
+        if (tuInput) {
+            tuInput.value = "";
+        }
+        if (tuLiveCalc) {
+            tuLiveCalc.textContent = "გამოთვლილი დრო: 0 წუთი";
+        }
+        
+        // Show modal
+        if (tuModal) {
+            tuModal.classList.remove("hidden");
+            if (tuInput) tuInput.focus();
+        } else {
+            // Fallback if modal not found
+            handleFileUpload(file, null);
+        }
+    }
+
+    function calculateTUDuration(tuVal) {
+        const tu = parseInt(tuVal) || 0;
+        const minutes = tu * 0.6;
+        const hours = minutes / 60;
+        const h_part = Math.floor(hours);
+        const m_part = Math.round(minutes % 60);
+        
+        let timeStr = "";
+        if (h_part > 0) {
+            timeStr = `${h_part} სთ`;
+            if (m_part > 0) {
+                timeStr += ` ${m_part} წთ`;
+            }
+        } else {
+            timeStr = `${m_part} წთ`;
+        }
+        return { minutes, timeStr };
+    }
+
+    if (tuInput) {
+        tuInput.addEventListener("input", (e) => {
+            const val = e.target.value;
+            if (val === "") {
+                tuLiveCalc.textContent = "გამოთვლილი დრო: 0 წუთი";
+                return;
+            }
+            const { minutes, timeStr } = calculateTUDuration(val);
+            tuLiveCalc.textContent = `გამოთვლილი დრო: ${timeStr} (${minutes.toFixed(0)} წთ)`;
+        });
+
+        tuInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                confirmTUAndUpload();
+            }
+        });
+    }
+
+    function confirmTUAndUpload() {
+        if (!tuInput || !tuInput.value) {
+            alert("გთხოვთ, შეიყვანოთ სამუშაო დრო (TU) გასაგრძელებლად.");
+            return;
+        }
+        const tuVal = parseInt(tuInput.value);
+        if (isNaN(tuVal) || tuVal < 0) {
+            alert("გთხოვთ, შეიყვანოთ ვალიდური დადებითი რიცხვი.");
+            return;
+        }
+        
+        lastEnteredTU = tuVal;
+        if (tuModal) tuModal.classList.add("hidden");
+        
+        if (pendingFileToUpload) {
+            handleFileUpload(pendingFileToUpload, lastEnteredTU);
+        }
+    }
+
+    if (tuConfirm) {
+        tuConfirm.addEventListener("click", confirmTUAndUpload);
+    }
+
+    function closeTUModal() {
+        if (tuModal) tuModal.classList.add("hidden");
+        pendingFileToUpload = null;
+        // reset file inputs so the same file can be uploaded again
+        if (fileInput) fileInput.value = "";
+    }
+
+    if (tuCancel) {
+        tuCancel.addEventListener("click", closeTUModal);
+    }
+
+    if (tuClose) {
+        tuClose.addEventListener("click", closeTUModal);
+    }
+
     const GEMINI_SCHEMA = {
       type: "object",
       properties: {
@@ -494,7 +609,7 @@ ${text}`;
 
     fileInput.addEventListener("change", (e) => {
         if (e.target.files.length > 0) {
-            handleFileUpload(e.target.files[0]);
+            askForTUAndUpload(e.target.files[0]);
         }
     });
 
@@ -512,7 +627,7 @@ ${text}`;
         e.preventDefault();
         dropZone.classList.remove("dragover");
         if (e.dataTransfer.files.length > 0) {
-            handleFileUpload(e.dataTransfer.files[0]);
+            askForTUAndUpload(e.dataTransfer.files[0]);
         }
     });
 
@@ -555,7 +670,7 @@ ${text}`;
         setTachometer((percent / 100) * 9.0);
     }
 
-    function handleFileUpload(file) {
+    function handleFileUpload(file, tu) {
         if (!file.name.toLowerCase().endsWith(".pdf")) {
             alert("გთხოვთ ატვირთოთ მხოლოდ PDF ფაილი.");
             return;
@@ -641,8 +756,14 @@ ${text}`;
             headers["X-Gemini-API-Key"] = savedApiKey;
         }
 
+        // Construct Request URL with TU query parameter if provided
+        let requestUrl = `${savedApiUrl}/analyze-instruction`;
+        if (tu !== undefined && tu !== null) {
+            requestUrl += `?tu=${tu}`;
+        }
+
         // Call FastAPI Backend (cache is used by default)
-        fetch(`${savedApiUrl}/analyze-instruction`, {
+        fetch(requestUrl, {
             method: "POST",
             headers: headers,
             body: formData
@@ -664,6 +785,12 @@ ${text}`;
             return data;
         })
         .then(data => {
+            // Override/Inject labor_time dynamically on frontend based on lastEnteredTU
+            if (lastEnteredTU !== null) {
+                const { minutes, timeStr } = calculateTUDuration(lastEnteredTU);
+                data.labor_time = `${lastEnteredTU} TU (${timeStr})`;
+            }
+            
             // Success: fill dial to max
             setTachometer(9.0);
             loadingStatusText.textContent = "ანალიზი წარმატებით დასრულდა!";

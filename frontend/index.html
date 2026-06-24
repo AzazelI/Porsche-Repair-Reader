@@ -110,6 +110,35 @@
             </div>
         </div>
 
+        <!-- TU (Time Unit) INPUT MODAL (Hidden by default) -->
+        <div id="tu-modal" class="settings-modal hidden">
+            <div class="settings-content glassmorphism">
+                <div class="modal-header">
+                    <h3><i class="fa-solid fa-clock"></i> სამუშაო დროის განსაზღვრა (Time Units)</h3>
+                    <button id="tu-close" class="btn-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 15px; font-size: 0.95rem; color: var(--color-text-grey); line-height: 1.5;">
+                        პორშეს მანუალებში სამუშაო დრო (ნორმა-საათები) არ არის ინტეგრირებული. გთხოვთ, ხელით შეიყვანოთ სამუშაო დრო <strong>Time Unit (TU)</strong>-ში.
+                    </p>
+                    <div class="settings-field">
+                        <label for="tu-input"><i class="fa-solid fa-calculator"></i> Time Unit (TU):</label>
+                        <input type="number" id="tu-input" min="0" placeholder="მაგ: 120" style="width: 100%; padding: 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; font-size: 16px; margin-top: 5px;" />
+                        <span class="settings-help" style="display: block; margin-top: 8px; font-size: 0.85rem; color: var(--color-amber-gold);">
+                            <i class="fa-solid fa-info-circle"></i> ცნობისათვის: 100 TU = 60 წუთი (1 სთ).
+                            <span id="tu-live-calc" style="display: block; margin-top: 4px; font-weight: 600; color: #88d413;">
+                                გამოთვლილი დრო: 0 წუთი
+                            </span>
+                        </span>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 25px; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button id="tu-cancel" class="btn-secondary" style="padding: 10px 20px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.05); color: #fff; cursor: pointer;"><i class="fa-solid fa-times"></i> გაუქმება</button>
+                        <button id="tu-confirm" class="btn-primary" style="padding: 10px 20px; border-radius: 6px; background: var(--color-guards-red); border: none; color: #fff; cursor: pointer; font-weight: 600;"><i class="fa-solid fa-check"></i> გაგრძელება</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- LANDING CONTAINER (Upload + Demo Cards + Telemetry) -->
         <div id="landing-container" class="landing-container">
             <!-- HERO UPLOAD SECTION -->
@@ -502,6 +531,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=2.3"></script>
+    <script src="app.js?v=2.4"></script>
 </body>
 </html>

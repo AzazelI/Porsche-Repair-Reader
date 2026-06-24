@@ -208,14 +208,16 @@ async def analyze_with_gemini(text: str, api_key: str, model_name: str = "gemini
         "2. REQUIRED & OPTIONAL PARTS (RENEW & IF NECESSARY): Extract two types of parts/consumables: (a) Mandatory replacements/applications explicitly marked as 'Renew', 'Replace', or lubricants/grease that must be applied; set their status to 'renew'. (b) Optional replacements explicitly marked as 'if necessary', 'renew if necessary', 'replace if necessary', or 'for damage'; set their status to 'if_necessary'. Reusable hardware like standard screws or washers that are simply 'removed' and 'installed' without any replacement instruction must NOT be extracted. Also, always include the main subject of the instruction (e.g., the CVT belt or the silencer itself) with 'renew' status since it is being replaced.\n"
         "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: You must translate technical steps and parts using standard dealer-level Georgian automotive workshop terminology. Avoid literal translations at all costs!\n"
         "   Apply this strict Automotive Glossary:\n"
-        f"{glossary_text}\n"
-        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n\n"
+        f"{glossary_text}\n"        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n"
+        "5. PORSCHE CENTRALIZED TABLES RULE: Porsche manuals group all special tools in a 'Tools' table and torque specifications/capacities in a 'Technical values' table on page 1/start of the document. You MUST parse these tables carefully, extract all special tools and torque values/fluid capacities, and map them back to the specific steps where they are used (even if the steps only mention the tool or torque by reference). Do NOT let these tools or torque specifications get lost.\n"
+        "6. PORSCHE STEP STRUCTURE: Steps use hierarchical decimal numbering like '1.1', '1.2', etc. You MUST preserve this step numbering format. For step descriptions (description_en and description_ka), prepend the decimal step number (e.g. '1.1: Position vehicle...', '1.2: Raise vehicle...') to preserve the original manual structure.\n"
+        "7. PORSCHE CROSS-REFERENCES: Cross-references to other repair instructions are denoted by '>' followed by an operation number and title (e.g. '> 198119A1 Removing and installing silencer'). Make sure to extract these and map them to the steps as warnings or technical notes.\n\n"
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
         "2. Identify the specific vehicle or motorcycle model name (e.g., 'R 1300 GS', 'Panamera 4S', '911 GT3 (992)'). Search the text carefully for the model designation. If not specified, look for context clues or model codes, otherwise use 'Unknown Model'.\n"
         "3. Extract the exact labor time or FRUs listed. Format strictly as 'X FRU' (e.g., '4 FRU').\n"
         "4. Extract required parts and consumables (with statuses set to 'renew'). For parts without part numbers, set part_number to 'N/A' or find it in the text.\n"
-        "5. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests, engine start suppression checks, or diagnostic checklists to avoid cluttering the timeline. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). Translate each step accurately using the Automotive Glossary above.\n"
+        "5. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests, engine start suppression checks, or diagnostic checklists to avoid cluttering the timeline. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). For step descriptions, prepend the decimal step number (e.g. '1.1: ...', '1.2: ...') to preserve the original manual structure. Translate each step accurately using the Automotive Glossary above.\n"
         "6. Extract safety warnings or torque specs associated with steps.\n"
         "7. Extract Special Tools required.\n"
         "8. Extract ALL fluid fill capacities (oils, coolants, greases, sprays, fluids). For each entry list: the fluid name in English, its Georgian translation, and the exact fill quantity with unit as written in the document (e.g. '2,55 l', '0,5 kg'). Preserve European comma decimal notation. If none are mentioned, return an empty array.\n\n"
@@ -294,7 +296,10 @@ async def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.
         "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: Use standard dealer-level Georgian automotive terminology. Avoid literal translations!\n"
         "   Strictly apply this Automotive Glossary:\n"
         f"{glossary_text}\n"
-        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n\n"
+        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n"
+        "5. PORSCHE CENTRALIZED TABLES RULE: Porsche manuals group all special tools in a 'Tools' table and torque specifications/capacities in a 'Technical values' table on page 1/start of the document. You MUST parse these tables carefully, extract all special tools and torque values/fluid capacities, and map them back to the specific steps where they are used (even if the steps only mention the tool or torque by reference). Do NOT let these tools or torque specifications get lost.\n"
+        "6. PORSCHE STEP STRUCTURE: Steps use hierarchical decimal numbering like '1.1', '1.2', etc. You MUST preserve this step numbering format. For step descriptions (description_en and description_ka), prepend the decimal step number (e.g. '1.1: Position vehicle...', '1.2: Raise vehicle...') to preserve the original manual structure.\n"
+        "7. PORSCHE CROSS-REFERENCES: Cross-references to other repair instructions are denoted by '>' followed by an operation number and title (e.g. '> 198119A1 Removing and installing silencer'). Make sure to extract these and map them to the steps as warnings or technical notes.\n\n"
         "JSON SCHEMA:\n"
         f"{json.dumps(GEMINI_SCHEMA, ensure_ascii=False)}\n\n"
         "Instructions:\n"
@@ -302,7 +307,7 @@ async def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.
         "2. Identify specific vehicle/motorcycle model name (e.g. 'R 1300 GS', '911 Carrera S'). If not found, use 'Unknown Model'.\n"
         "3. Format labor time strictly as 'X FRU'.\n"
         "4. For parts without numbers, set part_number to 'N/A'.\n"
-        "5. Sequence step-by-step repair instruction steps focusing strictly on physical mechanical work (Disassembly, Main work, Reassembly). Ignore/highly summarize generic post-repair function tests to avoid clutter. Keep timeline logical and focused (10-20 steps max). Translate using Glossary.\n"
+        "5. Sequence step-by-step repair instruction steps focusing strictly on physical mechanical work (Disassembly, Main work, Reassembly). Ignore/highly summarize generic post-repair function tests to avoid clutter. Keep timeline logical and focused (10-20 steps max). For step descriptions, prepend the decimal step number (e.g. '1.1: ...', '1.2: ...') to preserve the original manual structure. Translate using Glossary.\n"
         "6. Extract safety warnings or torque specs.\n"
         "7. Extract special tools.\n\n"
         f"Repair Instruction Text:\n{text}"
@@ -406,16 +411,19 @@ async def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_na
         "3. HIGH-END AUTOMOTIVE GEORGIAN TRANSLATION: You must translate technical steps and parts using standard dealer-level Georgian automotive workshop terminology. Avoid literal translations at all costs!\n"
         "   Apply this strict Glossary:\n"
         f"{glossary_text}\n"
-        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n\n"
+        "4. OIL FILTER & RUNNING-IN CHECK RULE: If the manual mentions installing a short vs. long oil filter (especially on BMW or other motorbikes), translate 'running-in check' as 'გასახმარისების სერვისი (აბკატკა)'. Always enforce that a short oil filter is only allowed for the distance up to the running-in check (აბკატკა), and after that, only a long oil filter must be installed.\n"
+        "5. PORSCHE CENTRALIZED TABLES RULE: Porsche manuals group all special tools in a 'Tools' table and torque specifications/capacities in a 'Technical values' table on page 1/start of the document. You MUST parse these tables carefully, extract all special tools and torque values/fluid capacities, and map them back to the specific steps where they are used (even if the steps only mention the tool or torque by reference). Do NOT let these tools or torque specifications get lost.\n"
+        "6. PORSCHE STEP STRUCTURE: Steps use hierarchical decimal numbering like '1.1', '1.2', etc. You MUST preserve this step numbering format. For step descriptions (description_en and description_ka), prepend the decimal step number (e.g. '1.1: Position vehicle...', '1.2: Raise vehicle...') to preserve the original manual structure.\n"
+        "7. PORSCHE CROSS-REFERENCES: Cross-references to other repair instructions are denoted by '>' followed by an operation number and title (e.g. '> 198119A1 Removing and installing silencer'). Make sure to extract these and map them to the steps as warnings or technical notes.\n\n"
         "Instructions:\n"
         "1. Identify the Title (EN and translation in Georgian).\n"
         "2. Identify the specific vehicle or motorcycle model name (e.g., 'R 1300 GS', '911 Carrera S'). Search the PDF pages carefully for the model designation. If not specified, look for context clues or model codes, otherwise use 'Unknown Model'.\n"
         "3. Extract the exact labor time or FRUs listed. Format strictly as 'X FRU' (e.g., '7 FRU').\n"
         "4. Extract required parts and consumables (with statuses set to 'renew'). For parts without part numbers, set part_number to 'N/A' or find it in the text.\n"
-        "5. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests to avoid clutter. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). Translate each step accurately using the Automotive Glossary above.\n"
+        "5. Extract the step-by-step repair instruction sequence focusing strictly on the actual mechanical repair work (Preliminary works, Disassembly, Main work, Reassembly/Follow-up mechanical work). You MUST ignore or highly summarize generic post-repair function tests to avoid clutter. Keep the timeline logical, actionable, and focused on the physical mechanical steps (usually around 10-20 steps max). For step descriptions, prepend the decimal step number (e.g. '1.1: ...', '1.2: ...') to preserve the original manual structure. Translate each step accurately using the Automotive Glossary above.\n"
         "6. Extract safety warnings or torque specs associated with steps.\n"
         "7. Extract Special Tools required.\n"
-        "8. Extract ALL fluid fill capacities (oils, coolants, greases, sprays). For each entry list: the fluid name in English, its Georgian translation, and the exact fill quantity with unit as written in the document (e.g. '2,55 l', '0,5 kg'). Preserve European comma decimal notation. If none are mentioned, return an empty array.\n"
+        "8. Extract ALL fluid fill capacities (oils, coolants, greases, sprays). For each entry list: the fluid name in English, its Georgian translation, and the exact fill quantity with unit as written in the document (e.g. '2,55 l', '0,5 kg'). Preserve European comma decimal notation. If none are mentioned, return an empty array."
     )
 
     parts = [
@@ -475,6 +483,7 @@ async def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_na
 ])
 async def analyze_instruction(
     file: UploadFile = File(...),
+    tu: Optional[int] = Query(None, description="Labor time in Time Units"),
     x_gemini_api_key: Optional[str] = Header(None),
     x_groq_api_key: Optional[str] = Header(None),
     force_refresh: bool = Query(False, description="Bypass cache and force fresh analysis")
@@ -528,6 +537,19 @@ async def analyze_instruction(
             logger.info(f"force_refresh=True: bypassing cache for hash {file_hash}")
 
         if cached_data:
+            if tu is not None:
+                # Format labor time: 100 TU = 60 minutes
+                minutes = tu * 0.6
+                hours = minutes / 60
+                h_part = int(hours)
+                m_part = round(minutes % 60)
+                if h_part > 0:
+                    time_str = f"{h_part} სთ"
+                    if m_part > 0:
+                        time_str += f" {m_part} წთ"
+                else:
+                    time_str = f"{m_part} წთ"
+                cached_data["labor_time"] = f"{tu} TU ({time_str})"
             return {**cached_data, "file_hash": file_hash, "_cache_hit": True}
 
         logger.info(f"Extracting text from PDF: {file.filename}")
@@ -618,6 +640,19 @@ async def analyze_instruction(
                 "extracted_text": extracted_text
             }
         
+        if tu is not None and structured_data:
+            minutes = tu * 0.6
+            hours = minutes / 60
+            h_part = int(hours)
+            m_part = round(minutes % 60)
+            if h_part > 0:
+                time_str = f"{h_part} სთ"
+                if m_part > 0:
+                    time_str += f" {m_part} წთ"
+            else:
+                time_str = f"{m_part} წთ"
+            structured_data["labor_time"] = f"{tu} TU ({time_str})"
+
         # Save cache
         try:
             with open(cache_file, "w", encoding="utf-8") as f:
