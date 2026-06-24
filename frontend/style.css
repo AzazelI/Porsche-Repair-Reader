@@ -544,6 +544,12 @@ body.porsche-theme {
     border: 1px solid rgba(0, 150, 255, 0.2);
 }
 
+.icon-cost {
+    background-color: rgba(136, 212, 19, 0.08);
+    color: #88d413;
+    border: 1px solid rgba(136, 212, 19, 0.2);
+}
+
 .card-info h3 {
     font-size: 13px;
     color: var(--color-text-grey);

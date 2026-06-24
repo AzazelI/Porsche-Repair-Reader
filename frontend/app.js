@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Result Target Nodes
     const resLaborTime = document.getElementById("res-labor-time");
+    const resLaborCost = document.getElementById("res-labor-cost");
     const resTotalParts = document.getElementById("res-total-parts");
     const resTotalTools = document.getElementById("res-total-tools");
     const resTitleKa = document.getElementById("res-title-ka");
@@ -846,6 +847,78 @@ ${text}`;
         resLaborTime.textContent = data.labor_time || "N/A";
         resTotalParts.textContent = data.parts ? data.parts.length : 0;
         resTotalTools.textContent = data.special_tools ? data.special_tools.length : 0;
+
+        // Calculate labor cost based on vehicle type and labor time
+        let costHtml = "N/A";
+        if (data.labor_time && data.labor_time !== "N/A") {
+            const model = (data.model_name || "").toLowerCase();
+            const titleEn = (data.title_en || "").toLowerCase();
+            const titleKa = (data.title_ka || "").toLowerCase();
+            
+            let ratePerHour = 130;
+            let vehicleLabel = "შიგაწვის ძრავი";
+            let multiplierLabel = "130 ₾/სთ";
+            
+            if (
+                model.includes("taycan") || 
+                model.includes("electric") || 
+                model.includes(" ev") || 
+                model.endsWith("ev") ||
+                titleEn.includes("taycan") ||
+                titleEn.includes("electric") ||
+                titleEn.includes("ev") ||
+                titleKa.includes("ელექტრო") ||
+                titleKa.includes("ტაიკანი")
+            ) {
+                ratePerHour = 200;
+                vehicleLabel = "სრულიად ელექტრო";
+                multiplierLabel = "200 ₾/სთ";
+            } else if (
+                model.includes("hybrid") || 
+                model.includes("e-hybrid") || 
+                model.includes("phev") || 
+                model.includes("mhev") || 
+                model.includes("ჰიბრიდ") ||
+                titleEn.includes("hybrid") ||
+                titleEn.includes("phev") ||
+                titleEn.includes("mhev") ||
+                titleKa.includes("ჰიბრიდ")
+            ) {
+                ratePerHour = 170;
+                vehicleLabel = "ჰიბრიდი";
+                multiplierLabel = "170 ₾/სთ";
+            }
+            
+            // Extract hours from labor_time
+            let hours = 0;
+            if (lastEnteredTU !== null) {
+                hours = lastEnteredTU / 100;
+            } else {
+                // Parse float from string like "2.5 Hours (სთ)" or "2.5 სთ" or "100 TU (1 სთ)"
+                // Look for TU first
+                const tuMatch = data.labor_time.match(/(\d+)\s*TU/i);
+                if (tuMatch) {
+                    hours = parseInt(tuMatch[1]) / 100;
+                } else {
+                    const hourMatch = data.labor_time.match(/([\d.]+)\s*(?:Hour|სთ|hrs|h)/i);
+                    if (hourMatch) {
+                        hours = parseFloat(hourMatch[1]);
+                    } else {
+                        const genericMatch = data.labor_time.match(/([\d.]+)/);
+                        if (genericMatch) {
+                            hours = parseFloat(genericMatch[1]);
+                        }
+                    }
+                }
+            }
+            
+            const totalCost = hours * ratePerHour;
+            costHtml = `${Math.round(totalCost)} ₾ <span style="font-size: 11px; color: rgba(255,255,255,0.45); display: block; font-weight: normal; margin-top: 3px; letter-spacing: 0.5px;">${vehicleLabel} (${multiplierLabel})</span>`;
+        }
+        
+        if (resLaborCost) {
+            resLaborCost.innerHTML = costHtml;
+        }
         
         // Set Titles
         resTitleKa.textContent = data.title_ka || "სარემონტო ინსტრუქცია";
@@ -1144,6 +1217,7 @@ ${text}`;
     
     const DEMO_DATA = {
         gt3: {
+            model_name: "Porsche 911 GT3 (992)",
             title_ka: "Porsche 911 GT3 (992) - გამონაბოლქვის სპორტული მაყუჩის აწყობა",
             title_en: "Porsche 911 GT3 (992) - Sports Exhaust Muffler & Valve Assembly",
             labor_time: "2.5 Hours (სთ)",
@@ -1225,6 +1299,7 @@ ${text}`;
             ]
         },
         cayenne: {
+            model_name: "Porsche Cayenne S (9YA)",
             title_ka: "Porsche Cayenne S (9YA) - კარბონის შემშვები სისტემა და ფილტრი",
             title_en: "Porsche Cayenne S (9YA) - Carbon Air Intake Filter & Snorkel Assembly",
             labor_time: "1.8 Hours (სთ)",
@@ -1306,6 +1381,7 @@ ${text}`;
             ]
         },
         taycan: {
+            model_name: "Porsche Taycan Turbo S",
             title_ka: "Porsche Taycan Turbo S - ელემენტის გაგრილების სერვისი",
             title_en: "Porsche Taycan Turbo S - High-Voltage Battery Cooling System Service",
             labor_time: "4.2 Hours (სთ)",
@@ -1397,6 +1473,7 @@ ${text}`;
             ]
         },
         r1200gs: {
+            model_name: "BMW R 1200 GS",
             title_ka: "BMW R 1200 GS - ძრავის ზეთისა და ფილტრის შეცვლა",
             title_en: "BMW R 1200 GS - Engine Oil & Filter Replacement Service",
             labor_time: "0.8 Hours (სთ) [8 FRU]",
@@ -1500,6 +1577,8 @@ ${text}`;
             const data = DEMO_DATA[demoKey];
             
             if (data) {
+                // Reset lastEnteredTU since we are loading demo data (which has pre-set hours)
+                lastEnteredTU = null;
                 // Show loading screen, hide landing
                 landingContainer.classList.add("hidden");
                 loadingSection.classList.remove("hidden");
