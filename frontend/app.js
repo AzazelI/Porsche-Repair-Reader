@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const apiKeyInput = document.getElementById("api-key-input");
     const apiUrlInput = document.getElementById("api-url-input");
     const settingsSave = document.getElementById("settings-save");
+    const bypassCacheInput = document.getElementById("bypass-cache-input");
     const logoPorsche = document.getElementById("logo-porsche");
     
     // TU Modal Nodes
@@ -757,10 +758,17 @@ ${text}`;
             headers["X-Gemini-API-Key"] = savedApiKey;
         }
 
-        // Construct Request URL with TU query parameter if provided
+        // Construct Request URL with query parameters
         let requestUrl = `${savedApiUrl}/analyze-instruction`;
+        const queryParams = [];
         if (tu !== undefined && tu !== null) {
-            requestUrl += `?tu=${tu}`;
+            queryParams.push(`tu=${tu}`);
+        }
+        if (bypassCacheInput && bypassCacheInput.checked) {
+            queryParams.push("force_refresh=true");
+        }
+        if (queryParams.length > 0) {
+            requestUrl += `?${queryParams.join("&")}`;
         }
 
         // Call FastAPI Backend (cache is used by default)
