@@ -1,3 +1,4 @@
+# Trigger rebuild with updated HF_TOKEN
 name: Sync to Hugging Face Spaces
 
 on:
