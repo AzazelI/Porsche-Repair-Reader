@@ -21,5 +21,17 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          mkdir deploy_dir
+          cp -r backend deploy_dir/
+          cp Dockerfile deploy_dir/
+          cp README.md deploy_dir/
+          cd deploy_dir
+          git init
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git remote add hf https://AzazeI:$HF_TOKEN@huggingface.co/spaces/AzazeI/porsche-repair-reader
-          git push --force hf HEAD:refs/heads/main
+          git checkout -b main
+          git add .
+          git commit -m "deploy: update backend code and configuration"
+          git push --force hf main
+
