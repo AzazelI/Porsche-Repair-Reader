@@ -913,7 +913,7 @@ ${text}`;
             }
             
             const totalCost = hours * ratePerHour;
-            costHtml = `${Math.round(totalCost)} ₾ <span style="font-size: 11px; color: rgba(255,255,255,0.45); display: block; font-weight: normal; margin-top: 3px; letter-spacing: 0.5px;">${vehicleLabel} (${multiplierLabel})</span>`;
+            costHtml = `${Math.round(totalCost)} ₾ <span class="cost-subtext">${vehicleLabel} (${multiplierLabel})</span>`;
         }
         
         if (resLaborCost) {
