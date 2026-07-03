@@ -3076,6 +3076,17 @@ body.body-rumble {
         page-break-inside: avoid;
         break-inside: avoid;
     }
+    
+    /* Prevent split/break across page boundaries during print */
+    .steps-panel, .parts-panel, .tools-panel, .details-panel, .summary-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+    
+    .step-node, .fluid-info, tr, .torque-widget, .step-warning {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
 }
 
 /* ==========================================
