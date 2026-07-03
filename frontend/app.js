@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }    function playTaycanStartupSound() {
-        console.log("Playing official Taycan sound from assets...");
+        console.log("Playing official Taycan sound from assets (5s limit)...");
         try {
             const audio = new Audio('assets/porsche_taycan_sound.wav');
             audio.volume = 0.85;
@@ -100,6 +100,19 @@ document.addEventListener("DOMContentLoaded", () => {
             if (playPromise !== undefined) {
                 playPromise.then(() => {
                     console.log("Taycan audio playback started successfully.");
+                    
+                    // Stop and fade out after 5 seconds
+                    setTimeout(() => {
+                        let fadeInterval = setInterval(() => {
+                            if (audio.volume > 0.05) {
+                                audio.volume -= 0.05;
+                            } else {
+                                clearInterval(fadeInterval);
+                                audio.pause();
+                                audio.currentTime = 0;
+                            }
+                        }, 50);
+                    }, 5000);
                 }).catch(error => {
                     console.error("Audio playback failed:", error);
                 });
