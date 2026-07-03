@@ -94,100 +94,105 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function playTaycanStartupSound() {
+        console.log("Initializing Taycan Startup Sound...");
         const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        const ctx = new AudioContext();
-        
-        const now = ctx.currentTime;
-        
-        // 1. Clean Sub-Bass Hum (Sine Wave)
-        const subOsc = ctx.createOscillator();
-        const subGain = ctx.createGain();
-        subOsc.type = 'sine';
-        subOsc.frequency.setValueAtTime(35, now);
-        subOsc.frequency.exponentialRampToValueAtTime(60, now + 1.8);
-        
-        subOsc.connect(subGain);
-        subGain.connect(ctx.destination);
-        
-        // 2. FM Synthesis for Electric Coil Whine (Sine modulating Triangle)
-        // Carrier (Triangle wave)
-        const carrier = ctx.createOscillator();
-        const carrierGain = ctx.createGain();
-        carrier.type = 'triangle';
-        carrier.frequency.setValueAtTime(100, now);
-        carrier.frequency.exponentialRampToValueAtTime(320, now + 1.8);
-        
-        // Modulator (Sine wave)
-        const modulator = ctx.createOscillator();
-        const modulatorGain = ctx.createGain();
-        modulator.type = 'sine';
-        modulator.frequency.setValueAtTime(150, now);
-        modulator.frequency.exponentialRampToValueAtTime(450, now + 1.8);
-        
-        // Modulation depth: sweeps up as the sound intensifies
-        modulatorGain.gain.setValueAtTime(30, now);
-        modulatorGain.gain.exponentialRampToValueAtTime(120, now + 1.8);
-        
-        // Modulator -> ModulatorGain -> Carrier Frequency
-        modulator.connect(modulatorGain);
-        modulatorGain.connect(carrier.frequency);
-        
-        // Bandpass filter to isolate the futuristic resonance
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.Q.setValueAtTime(4.0, now);
-        filter.frequency.setValueAtTime(120, now);
-        filter.frequency.exponentialRampToValueAtTime(650, now + 1.6);
-        
-        carrier.connect(filter);
-        filter.connect(carrierGain);
-        carrierGain.connect(ctx.destination);
-        
-        // 3. Ambient Electric Space swoosh (filtered pink/white noise)
-        const bufferSize = ctx.sampleRate * 2.0; // 2 seconds
-        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) {
-            data[i] = Math.random() * 2 - 1;
+        if (!AudioContext) {
+            console.warn("Web Audio API not supported in this browser.");
+            return;
         }
-        const noise = ctx.createBufferSource();
-        noise.buffer = buffer;
         
-        const noiseFilter = ctx.createBiquadFilter();
-        noiseFilter.type = 'bandpass';
-        noiseFilter.Q.setValueAtTime(10.0, now);
-        noiseFilter.frequency.setValueAtTime(150, now);
-        noiseFilter.frequency.exponentialRampToValueAtTime(800, now + 1.5);
-        
-        const noiseGain = ctx.createGain();
-        noise.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
-        noiseGain.connect(ctx.destination);
-        
-        // Volume Envelopes
-        subGain.gain.setValueAtTime(0, now);
-        subGain.gain.linearRampToValueAtTime(0.8, now + 0.3);
-        subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
-        
-        carrierGain.gain.setValueAtTime(0, now);
-        carrierGain.gain.linearRampToValueAtTime(0.5, now + 0.4);
-        carrierGain.gain.exponentialRampToValueAtTime(0.001, now + 1.9);
-        
-        noiseGain.gain.setValueAtTime(0, now);
-        noiseGain.gain.linearRampToValueAtTime(0.2, now + 0.3);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 1.7);
-        
-        // Play
-        subOsc.start(now);
-        carrier.start(now);
-        modulator.start(now);
-        noise.start(now);
-        
-        subOsc.stop(now + 2.0);
-        carrier.stop(now + 2.0);
-        modulator.stop(now + 2.0);
-        noise.stop(now + 2.0);
+        try {
+            const ctx = new AudioContext();
+            console.log("AudioContext State:", ctx.state);
+            
+            // Force resume context (critical for Chrome/Safari)
+            if (ctx.state === 'suspended') {
+                ctx.resume().then(() => {
+                    console.log("AudioContext resumed successfully.");
+                });
+            }
+            
+            const now = ctx.currentTime;
+            
+            // Create nodes
+            const oscLow = ctx.createOscillator();
+            const oscMid = ctx.createOscillator();
+            const oscHigh = ctx.createOscillator();
+            const filter = ctx.createBiquadFilter();
+            const mainGain = ctx.createGain();
+            
+            // Configure Oscillators (Sine and Triangle for pure tones, no sawtooth)
+            oscLow.type = 'sine';
+            oscLow.frequency.setValueAtTime(45, now);
+            oscLow.frequency.exponentialRampToValueAtTime(75, now + 1.8);
+            
+            oscMid.type = 'triangle';
+            oscMid.frequency.setValueAtTime(90, now);
+            oscMid.frequency.exponentialRampToValueAtTime(180, now + 1.8);
+            
+            oscHigh.type = 'sine';
+            oscHigh.frequency.setValueAtTime(180, now);
+            oscHigh.frequency.exponentialRampToValueAtTime(360, now + 1.8);
+            
+            // Filter Sweep (Bandpass creates the characteristic EV swoosh)
+            filter.type = 'bandpass';
+            filter.Q.setValueAtTime(3.0, now);
+            filter.frequency.setValueAtTime(120, now);
+            filter.frequency.exponentialRampToValueAtTime(950, now + 1.7);
+            
+            // Connect nodes
+            oscLow.connect(filter);
+            oscMid.connect(filter);
+            oscHigh.connect(filter);
+            
+            filter.connect(mainGain);
+            mainGain.connect(ctx.destination);
+            
+            // Additive Noise for the electric wind swoosh
+            const bufferSize = ctx.sampleRate * 2.0; // 2 seconds
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+            
+            const noiseFilter = ctx.createBiquadFilter();
+            noiseFilter.type = 'bandpass';
+            noiseFilter.Q.setValueAtTime(6.0, now);
+            noiseFilter.frequency.setValueAtTime(150, now);
+            noiseFilter.frequency.exponentialRampToValueAtTime(600, now + 1.6);
+            
+            const noiseGain = ctx.createGain();
+            noise.connect(noiseFilter);
+            noiseFilter.connect(noiseGain);
+            noiseGain.connect(ctx.destination);
+            
+            // Gain envelopes (fade in and fade out)
+            mainGain.gain.setValueAtTime(0, now);
+            mainGain.gain.linearRampToValueAtTime(0.75, now + 0.4);
+            mainGain.gain.exponentialRampToValueAtTime(0.001, now + 1.8);
+            
+            noiseGain.gain.setValueAtTime(0, now);
+            noiseGain.gain.linearRampToValueAtTime(0.2, now + 0.3);
+            noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+            
+            // Start and stop all nodes
+            oscLow.start(now);
+            oscMid.start(now);
+            oscHigh.start(now);
+            noise.start(now);
+            
+            oscLow.stop(now + 2.0);
+            oscMid.stop(now + 2.0);
+            oscHigh.stop(now + 2.0);
+            noise.stop(now + 2.0);
+            
+            console.log("Taycan Startup Sound playing successfully.");
+        } catch (err) {
+            console.error("Failed to play Taycan sound:", err);
+        }
     }
 
     // API Configuration - Set fallback directly to production so it works out-of-the-box for everyone
