@@ -98,47 +98,53 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!AudioContext) return;
         const ctx = new AudioContext();
         
-        // Deep Sub Bass Rumble
-        const osc1 = ctx.createOscillator();
-        const gain1 = ctx.createGain();
-        osc1.type = 'sawtooth';
-        osc1.frequency.setValueAtTime(45, ctx.currentTime);
-        osc1.frequency.exponentialRampToValueAtTime(75, ctx.currentTime + 1.8);
+        const now = ctx.currentTime;
         
-        const filter1 = ctx.createBiquadFilter();
-        filter1.type = 'lowpass';
-        filter1.frequency.setValueAtTime(80, ctx.currentTime);
-        filter1.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 1.8);
+        // 1. Clean Sub-Bass Hum (Sine Wave)
+        const subOsc = ctx.createOscillator();
+        const subGain = ctx.createGain();
+        subOsc.type = 'sine';
+        subOsc.frequency.setValueAtTime(35, now);
+        subOsc.frequency.exponentialRampToValueAtTime(60, now + 1.8);
         
-        osc1.connect(filter1);
-        filter1.connect(gain1);
-        gain1.connect(ctx.destination);
+        subOsc.connect(subGain);
+        subGain.connect(ctx.destination);
         
-        // Futuristic Electric Whir (Detuned Sawtooths)
-        const osc2 = ctx.createOscillator();
-        const osc3 = ctx.createOscillator();
-        const gain2 = ctx.createGain();
+        // 2. FM Synthesis for Electric Coil Whine (Sine modulating Triangle)
+        // Carrier (Triangle wave)
+        const carrier = ctx.createOscillator();
+        const carrierGain = ctx.createGain();
+        carrier.type = 'triangle';
+        carrier.frequency.setValueAtTime(100, now);
+        carrier.frequency.exponentialRampToValueAtTime(320, now + 1.8);
         
-        osc2.type = 'sawtooth';
-        osc2.frequency.setValueAtTime(120, ctx.currentTime);
-        osc2.frequency.exponentialRampToValueAtTime(280, ctx.currentTime + 1.8);
+        // Modulator (Sine wave)
+        const modulator = ctx.createOscillator();
+        const modulatorGain = ctx.createGain();
+        modulator.type = 'sine';
+        modulator.frequency.setValueAtTime(150, now);
+        modulator.frequency.exponentialRampToValueAtTime(450, now + 1.8);
         
-        osc3.type = 'triangle';
-        osc3.frequency.setValueAtTime(121.5, ctx.currentTime);
-        osc3.frequency.exponentialRampToValueAtTime(283, ctx.currentTime + 1.8);
+        // Modulation depth: sweeps up as the sound intensifies
+        modulatorGain.gain.setValueAtTime(30, now);
+        modulatorGain.gain.exponentialRampToValueAtTime(120, now + 1.8);
         
-        const filter2 = ctx.createBiquadFilter();
-        filter2.type = 'bandpass';
-        filter2.Q.setValueAtTime(3.0, ctx.currentTime);
-        filter2.frequency.setValueAtTime(150, ctx.currentTime);
-        filter2.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 1.6);
+        // Modulator -> ModulatorGain -> Carrier Frequency
+        modulator.connect(modulatorGain);
+        modulatorGain.connect(carrier.frequency);
         
-        osc2.connect(filter2);
-        osc3.connect(filter2);
-        filter2.connect(gain2);
-        gain2.connect(ctx.destination);
+        // Bandpass filter to isolate the futuristic resonance
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.Q.setValueAtTime(4.0, now);
+        filter.frequency.setValueAtTime(120, now);
+        filter.frequency.exponentialRampToValueAtTime(650, now + 1.6);
         
-        // Space-ship Swoosh (Noise / Resonance)
+        carrier.connect(filter);
+        filter.connect(carrierGain);
+        carrierGain.connect(ctx.destination);
+        
+        // 3. Ambient Electric Space swoosh (filtered pink/white noise)
         const bufferSize = ctx.sampleRate * 2.0; // 2 seconds
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -150,39 +156,38 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const noiseFilter = ctx.createBiquadFilter();
         noiseFilter.type = 'bandpass';
-        noiseFilter.Q.setValueAtTime(8.0, ctx.currentTime);
-        noiseFilter.frequency.setValueAtTime(180, ctx.currentTime);
-        noiseFilter.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 1.5);
+        noiseFilter.Q.setValueAtTime(10.0, now);
+        noiseFilter.frequency.setValueAtTime(150, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(800, now + 1.5);
         
         const noiseGain = ctx.createGain();
-        
         noise.connect(noiseFilter);
         noiseFilter.connect(noiseGain);
         noiseGain.connect(ctx.destination);
         
-        // Volume envelopes (fade in and fade out)
-        gain1.gain.setValueAtTime(0, ctx.currentTime);
-        gain1.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 0.3);
-        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
+        // Volume Envelopes
+        subGain.gain.setValueAtTime(0, now);
+        subGain.gain.linearRampToValueAtTime(0.8, now + 0.3);
+        subGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
         
-        gain2.gain.setValueAtTime(0, ctx.currentTime);
-        gain2.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.4);
-        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.9);
+        carrierGain.gain.setValueAtTime(0, now);
+        carrierGain.gain.linearRampToValueAtTime(0.5, now + 0.4);
+        carrierGain.gain.exponentialRampToValueAtTime(0.001, now + 1.9);
         
-        noiseGain.gain.setValueAtTime(0, ctx.currentTime);
-        noiseGain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.3);
-        noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.7);
+        noiseGain.gain.setValueAtTime(0, now);
+        noiseGain.gain.linearRampToValueAtTime(0.2, now + 0.3);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 1.7);
         
-        // Start & Stop
-        osc1.start(ctx.currentTime);
-        osc2.start(ctx.currentTime);
-        osc3.start(ctx.currentTime);
-        noise.start(ctx.currentTime);
+        // Play
+        subOsc.start(now);
+        carrier.start(now);
+        modulator.start(now);
+        noise.start(now);
         
-        osc1.stop(ctx.currentTime + 2.0);
-        osc2.stop(ctx.currentTime + 2.0);
-        osc3.stop(ctx.currentTime + 2.0);
-        noise.stop(ctx.currentTime + 2.0);
+        subOsc.stop(now + 2.0);
+        carrier.stop(now + 2.0);
+        modulator.stop(now + 2.0);
+        noise.stop(now + 2.0);
     }
 
     // API Configuration - Set fallback directly to production so it works out-of-the-box for everyone
