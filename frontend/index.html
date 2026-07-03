@@ -17,6 +17,83 @@
 <body class="porsche-theme">
     
     <!-- Top Premium Navbar -->
+    
+    <!-- Taycan Premium Login Screen -->
+    <div id="login-container" class="login-container" style="display: none;">
+        <!-- Left Side: Taycan Rear Ambient Background -->
+        <div class="login-hero">
+            <div class="login-hero-bg" style="background-image: url('assets/porsche_taycan_bg.png');"></div>
+            <div class="login-ambient-glow"></div>
+            <div class="login-hero-overlay"></div>
+            
+            <div class="login-hero-content">
+                <div class="hero-indicator">
+                    <span class="indicator-dot"></span>
+                    <span class="indicator-text">Taycan Electrified</span>
+                </div>
+                <h1 class="hero-title">Porsche Aftersales</h1>
+                <p class="hero-desc">Repair Instruction Reader. Secure technical diagnostic intelligence engine.</p>
+            </div>
+            
+            <div class="login-hero-watermark">
+                <span class="brand-porsche">PORSCHE</span>
+                <span class="brand-divider">|</span>
+                <span class="brand-sub">Aftersales Intelligence</span>
+            </div>
+        </div>
+
+        <!-- Right Side: Form -->
+        <div class="login-form-side">
+            <div class="login-ambient-glow-form"></div>
+            <div class="login-form-top">
+                <div class="porsche-brand-row">
+                    <span class="brand-porsche">PORSCHE</span>
+                    <span class="brand-divider">|</span>
+                    <span class="brand-sub">Center Tbilisi</span>
+                </div>
+                <span class="login-version">v2.5.0</span>
+            </div>
+
+            <div class="login-form-wrapper">
+                <div class="form-header">
+                    <h3>Sign In</h3>
+                    <p>Enter your administrative credentials to initialize cockpit session.</p>
+                </div>
+
+                <form id="login-form">
+                    <div class="input-group">
+                        <label for="login-email">Email Address</label>
+                        <input type="email" id="login-email" placeholder="you@tegeta.ge" required autocomplete="username">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="login-password">Password</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                            <button type="button" id="toggle-password" aria-label="Toggle password visibility">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="login-error" class="login-error"></div>
+
+                    <button type="submit" id="login-btn" class="login-submit-btn">
+                        <span>Sign In</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </form>
+            </div>
+
+            <div class="login-form-footer">
+                <span>Tegeta Cars Porsche Center Tbilisi</span>
+                <span class="footer-indicator"><i class="fa-solid fa-shield-halved"></i> Secured</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Wrapper -->
+    <div id="app-wrapper" class="hidden">
     <header class="porsche-navbar">
         <div class="logo-area">
             <img id="logo-porsche" class="logo-porsche" src="https://pngimg.com/uploads/porsche_logo/porsche_logo_PNG1.png" alt="Porsche" style="cursor: pointer;" onerror="this.style.display='none'">
@@ -482,7 +559,7 @@
     </main>
 
     <footer class="porsche-footer">
-        <p>&copy; 2026 Porsche Aftersales Intelligent Reader. All rights reserved. | Created by Givi Jananashvili</p>
+        <p>&copy; 2026 Porsche Aftersales Intelligent Reader. All rights reserved. | Created by Givi Jananashvili <a href="#" id="logout-btn" title="Sign Out" style="color: #E60021; margin-left: 10px; cursor: pointer; text-decoration: none;"><i class="fa-solid fa-right-from-bracket"></i></a></p>
     </footer>
 
     <!-- Launch Control Fullscreen Overlay -->
@@ -546,6 +623,8 @@
             </div>
         </div>
     </div>
+
+        </div>
 
     <script src="app.js?v=2.5"></script>
 </body>

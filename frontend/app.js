@@ -3,6 +3,188 @@
 // ==========================================
 
 document.addEventListener("DOMContentLoaded", () => {
+    // ==========================================
+    // AUTHENTICATION SECURITY GATE
+    // ==========================================
+    const appWrapper = document.getElementById("app-wrapper");
+    const loginContainer = document.getElementById("login-container");
+    const loginForm = document.getElementById("login-form");
+    const loginEmail = document.getElementById("login-email");
+    const loginPassword = document.getElementById("login-password");
+    const loginError = document.getElementById("login-error");
+    const loginBtn = document.getElementById("login-btn");
+    const togglePassword = document.getElementById("toggle-password");
+    const loginHeroBg = document.querySelector(".login-hero-bg");
+    const loginAmbientGlow = document.querySelector(".login-ambient-glow");
+    const logoutBtn = document.getElementById("logout-btn");
+
+    // Password visibility toggle
+    if (togglePassword) {
+        togglePassword.addEventListener("click", () => {
+            const isPassword = loginPassword.type === "password";
+            loginPassword.type = isPassword ? "text" : "password";
+            const icon = togglePassword.querySelector("i");
+            if (icon) {
+                if (isPassword) {
+                    icon.classList.remove("fa-eye");
+                    icon.classList.add("fa-eye-slash");
+                } else {
+                    icon.classList.remove("fa-eye-slash");
+                    icon.classList.add("fa-eye");
+                }
+            }
+        });
+    }
+
+    // Check if authenticated
+    if (localStorage.getItem("reader_auth") === "true") {
+        if (loginContainer) loginContainer.style.display = "none";
+        if (appWrapper) appWrapper.classList.remove("hidden");
+    } else {
+        if (loginContainer) loginContainer.style.display = "flex";
+        if (appWrapper) appWrapper.classList.add("hidden");
+    }
+
+    if (logoutBtn) {
+        logoutBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            localStorage.removeItem("reader_auth");
+            window.location.reload();
+        });
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            if (loginError) loginError.textContent = "";
+
+            const emailVal = loginEmail.value.trim().toLowerCase();
+            const passwordVal = loginPassword.value;
+
+            if (emailVal === "givijananashvili40@gmail.com" && passwordVal === "Suffering1@") {
+                // 1. Play startup sound (ev start)
+                playTaycanStartupSound();
+
+                // 2. Animate Taycan lights glow
+                if (loginHeroBg) loginHeroBg.classList.add("lit");
+                if (loginAmbientGlow) loginAmbientGlow.classList.add("lit");
+
+                // 3. Disable button, change text
+                if (loginBtn) {
+                    loginBtn.disabled = true;
+                    loginBtn.innerHTML = '<i class="fa-solid fa-bolt animate-pulse"></i> Initializing cockpit...';
+                }
+
+                // 4. Transition screen and open workspace after sound ramp
+                setTimeout(() => {
+                    if (loginContainer) {
+                        loginContainer.classList.add("fade-out");
+                        setTimeout(() => {
+                            loginContainer.style.display = "none";
+                        }, 800);
+                    }
+                    if (appWrapper) appWrapper.classList.remove("hidden");
+                    localStorage.setItem("reader_auth", "true");
+                }, 1800);
+
+            } else {
+                if (loginError) loginError.textContent = "Invalid username or password.";
+            }
+        });
+    }
+
+    function playTaycanStartupSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        
+        // Deep Sub Bass Rumble
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sawtooth';
+        osc1.frequency.setValueAtTime(45, ctx.currentTime);
+        osc1.frequency.exponentialRampToValueAtTime(75, ctx.currentTime + 1.8);
+        
+        const filter1 = ctx.createBiquadFilter();
+        filter1.type = 'lowpass';
+        filter1.frequency.setValueAtTime(80, ctx.currentTime);
+        filter1.frequency.exponentialRampToValueAtTime(200, ctx.currentTime + 1.8);
+        
+        osc1.connect(filter1);
+        filter1.connect(gain1);
+        gain1.connect(ctx.destination);
+        
+        // Futuristic Electric Whir (Detuned Sawtooths)
+        const osc2 = ctx.createOscillator();
+        const osc3 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        
+        osc2.type = 'sawtooth';
+        osc2.frequency.setValueAtTime(120, ctx.currentTime);
+        osc2.frequency.exponentialRampToValueAtTime(280, ctx.currentTime + 1.8);
+        
+        osc3.type = 'triangle';
+        osc3.frequency.setValueAtTime(121.5, ctx.currentTime);
+        osc3.frequency.exponentialRampToValueAtTime(283, ctx.currentTime + 1.8);
+        
+        const filter2 = ctx.createBiquadFilter();
+        filter2.type = 'bandpass';
+        filter2.Q.setValueAtTime(3.0, ctx.currentTime);
+        filter2.frequency.setValueAtTime(150, ctx.currentTime);
+        filter2.frequency.exponentialRampToValueAtTime(1400, ctx.currentTime + 1.6);
+        
+        osc2.connect(filter2);
+        osc3.connect(filter2);
+        filter2.connect(gain2);
+        gain2.connect(ctx.destination);
+        
+        // Space-ship Swoosh (Noise / Resonance)
+        const bufferSize = ctx.sampleRate * 2.0; // 2 seconds
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        
+        const noiseFilter = ctx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.Q.setValueAtTime(8.0, ctx.currentTime);
+        noiseFilter.frequency.setValueAtTime(180, ctx.currentTime);
+        noiseFilter.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 1.5);
+        
+        const noiseGain = ctx.createGain();
+        
+        noise.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        
+        // Volume envelopes (fade in and fade out)
+        gain1.gain.setValueAtTime(0, ctx.currentTime);
+        gain1.gain.linearRampToValueAtTime(0.7, ctx.currentTime + 0.3);
+        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 2.0);
+        
+        gain2.gain.setValueAtTime(0, ctx.currentTime);
+        gain2.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.4);
+        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.9);
+        
+        noiseGain.gain.setValueAtTime(0, ctx.currentTime);
+        noiseGain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.3);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.7);
+        
+        // Start & Stop
+        osc1.start(ctx.currentTime);
+        osc2.start(ctx.currentTime);
+        osc3.start(ctx.currentTime);
+        noise.start(ctx.currentTime);
+        
+        osc1.stop(ctx.currentTime + 2.0);
+        osc2.stop(ctx.currentTime + 2.0);
+        osc3.stop(ctx.currentTime + 2.0);
+        noise.stop(ctx.currentTime + 2.0);
+    }
+
     // API Configuration - Set fallback directly to production so it works out-of-the-box for everyone
     const DEFAULT_API_URL = "https://azazei-porsche-repair-reader.hf.space";
     
