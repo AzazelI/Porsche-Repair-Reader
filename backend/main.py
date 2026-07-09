@@ -8,11 +8,15 @@ from routers import analysis, gwen, obd, diagnostics
 # in routers/diagnostics.py, protected by the X-Admin-Token guard.
 app = FastAPI(title="Porsche Repair Instruction Reader API")
 
-# Enable CORS for frontend integration
+# Enable CORS for frontend integration.
+# ALLOWED_ORIGINS: comma-separated exact origins (e.g. "https://myapp.hf.space,http://localhost:5500").
+# Falls back to "*" for backwards compatibility; credentials are only allowed with explicit origins,
+# because "*" + allow_credentials=True makes Starlette reflect any origin with credentials.
+_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "*").split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_origins,
+    allow_credentials=_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
