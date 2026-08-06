@@ -88,35 +88,72 @@
                 <span class="login-version">v2.5.0</span>
             </div>
 
+            <!--
+                No credential form here by design. A static site cannot hold a secret:
+                anything the browser would need in order to check a password is
+                downloadable by anyone who opens DevTools. Sign-in is enforced one layer
+                up, at the Cloudflare edge, by Cloudflare Access — this page is not
+                served at all until the visitor has authenticated. See docs/ACCESS-SETUP.md.
+            -->
             <div class="login-form-wrapper">
                 <div class="form-header">
                     <h3>Sign In</h3>
-                    <p>Enter your administrative credentials to initialize cockpit session.</p>
+                    <p id="login-subtitle">Verifying your identity with Cloudflare Access.</p>
                 </div>
 
-                <form id="login-form">
-                    <div class="input-group">
-                        <label for="login-email">Email Address</label>
-                        <input type="email" id="login-email" placeholder="you@tegeta.ge" required autocomplete="username">
-                    </div>
-                    
-                    <div class="input-group">
-                        <label for="login-password">Password</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
-                            <button type="button" id="toggle-password" aria-label="Toggle password visibility">
-                                <i class="fa-solid fa-eye"></i>
-                            </button>
+                <!-- State 1: contacting the edge identity endpoint -->
+                <div id="access-state-checking" class="access-state">
+                    <p class="access-status-line">
+                        <i class="fa-solid fa-circle-notch access-spin"></i>
+                        Contacting identity provider&hellip;
+                    </p>
+                </div>
+
+                <!-- State 2: Access verified this visitor -->
+                <div id="access-state-ready" class="access-state hidden">
+                    <div class="access-identity">
+                        <i class="fa-solid fa-user-shield access-identity-icon"></i>
+                        <div class="access-identity-text">
+                            <span class="access-identity-label">Authenticated as</span>
+                            <span id="access-identity-email" class="access-identity-email"></span>
                         </div>
                     </div>
-
-                    <div id="login-error" class="login-error"></div>
-
-                    <button type="submit" id="login-btn" class="login-submit-btn">
-                        <span>Sign In</span>
+                    <button type="button" id="login-btn" class="login-submit-btn">
+                        <span>Enter Cockpit</span>
                         <i class="fa-solid fa-chevron-right"></i>
                     </button>
-                </form>
+                </div>
+
+                <!-- State 3: served from a public host with no Access policy in front -->
+                <div id="access-state-blocked" class="access-state hidden" role="alert">
+                    <div class="access-alert access-alert-danger">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                        <div>
+                            <strong>Access policy not configured</strong>
+                            <p>
+                                This deployment is not sitting behind Cloudflare Access, so there is
+                                nothing authenticating visitors. The cockpit stays closed until an
+                                administrator enables Access on this Pages project.
+                            </p>
+                            <p class="access-alert-meta">Setup guide: <code>docs/ACCESS-SETUP.md</code></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State 4: local development, no edge in front by definition -->
+                <div id="access-state-dev" class="access-state hidden">
+                    <div class="access-alert access-alert-warning">
+                        <i class="fa-solid fa-screwdriver-wrench"></i>
+                        <div>
+                            <strong>Local development &mdash; unauthenticated</strong>
+                            <p>Running on <code id="access-dev-host"></code>. No identity check is possible here.</p>
+                        </div>
+                    </div>
+                    <button type="button" id="login-btn-dev" class="login-submit-btn">
+                        <span>Enter Cockpit</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
             </div>
 
             <div class="login-form-footer">

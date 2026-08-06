@@ -4,94 +4,122 @@
 
 document.addEventListener("DOMContentLoaded", () => {
     // ==========================================
-    // AUTHENTICATION SECURITY GATE
+    // AUTHENTICATION — enforced at the Cloudflare edge
     // ==========================================
+    // Nothing in this file decides who gets in, and nothing in it could: every byte
+    // shipped to the browser is readable by whoever loads the page, so a credential
+    // compared here is a credential published. Cloudflare Access sits in front of this
+    // Pages project and refuses to serve index.html to an unauthenticated visitor.
+    // All this block does is read back the identity the edge already verified, and
+    // keep the cockpit shut when that identity is missing. See docs/ACCESS-SETUP.md.
     const appWrapper = document.getElementById("app-wrapper");
     const loginContainer = document.getElementById("login-container");
-    const loginForm = document.getElementById("login-form");
-    const loginEmail = document.getElementById("login-email");
-    const loginPassword = document.getElementById("login-password");
-    const loginError = document.getElementById("login-error");
-    const loginBtn = document.getElementById("login-btn");
-    const togglePassword = document.getElementById("toggle-password");
     const loginHeroBg = document.querySelector(".login-hero-bg");
     const loginAmbientGlow = document.querySelector(".login-ambient-glow");
     const logoutBtn = document.getElementById("logout-btn");
+    const loginSubtitle = document.getElementById("login-subtitle");
 
-    // Password visibility toggle
-    if (togglePassword) {
-        togglePassword.addEventListener("click", () => {
-            const isPassword = loginPassword.type === "password";
-            loginPassword.type = isPassword ? "text" : "password";
-            const icon = togglePassword.querySelector("i");
-            if (icon) {
-                if (isPassword) {
-                    icon.classList.remove("fa-eye");
-                    icon.classList.add("fa-eye-slash");
-                } else {
-                    icon.classList.remove("fa-eye-slash");
-                    icon.classList.add("fa-eye");
-                }
-            }
+    // Cloudflare serves these from the edge for any host behind an Access policy:
+    // 200 + identity JSON for a verified visitor, 404 when no policy applies.
+    const ACCESS_IDENTITY_URL = "/cdn-cgi/access/get-identity";
+    const ACCESS_LOGOUT_URL = "/cdn-cgi/access/logout";
+
+    const LOCAL_HOSTS = ["localhost", "127.0.0.1", "[::1]", "::1", ""];
+    const isLocalDev = window.location.protocol === "file:" || LOCAL_HOSTS.includes(window.location.hostname);
+
+    const accessStates = {
+        checking: document.getElementById("access-state-checking"),
+        ready: document.getElementById("access-state-ready"),
+        blocked: document.getElementById("access-state-blocked"),
+        dev: document.getElementById("access-state-dev"),
+    };
+
+    function showAccessState(name) {
+        Object.entries(accessStates).forEach(([key, el]) => {
+            if (el) el.classList.toggle("hidden", key !== name);
         });
     }
 
-    // Check if authenticated
-    if (localStorage.getItem("reader_auth") === "true") {
-        if (loginContainer) loginContainer.style.display = "none";
-        if (appWrapper) appWrapper.classList.remove("hidden");
-    } else {
-        if (loginContainer) loginContainer.style.display = "flex";
-        if (appWrapper) appWrapper.classList.add("hidden");
+    async function fetchAccessIdentity() {
+        try {
+            const res = await fetch(ACCESS_IDENTITY_URL, { credentials: "include", cache: "no-store" });
+            if (!res.ok) return null;
+            const identity = await res.json();
+            return identity && identity.email ? identity : null;
+        } catch (err) {
+            // No edge in front of us, or the request failed. Either way there is no
+            // verified identity, and treating "could not ask" as "allowed" is exactly
+            // the bug this rewrite exists to remove.
+            return null;
+        }
+    }
+
+    function openCockpit() {
+        playTaycanStartupSound();
+
+        if (loginHeroBg) loginHeroBg.classList.add("lit");
+        if (loginAmbientGlow) loginAmbientGlow.classList.add("lit");
+
+        document.querySelectorAll(".login-submit-btn").forEach((btn) => {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-bolt animate-pulse"></i> Initializing cockpit...';
+        });
+
+        setTimeout(() => {
+            if (loginContainer) {
+                loginContainer.classList.add("fade-out");
+                setTimeout(() => {
+                    loginContainer.style.display = "none";
+                }, 800);
+            }
+            if (appWrapper) appWrapper.classList.remove("hidden");
+        }, 1800);
     }
 
     if (logoutBtn) {
         logoutBtn.addEventListener("click", (e) => {
             e.preventDefault();
-            localStorage.removeItem("reader_auth");
-            window.location.reload();
+            // Ending the session is the edge's job. A local flag would only log the
+            // user out of the UI while leaving the real Access session wide open.
+            window.location.href = isLocalDev ? window.location.pathname : ACCESS_LOGOUT_URL;
         });
     }
 
-    if (loginForm) {
-        loginForm.addEventListener("submit", (e) => {
-            e.preventDefault();
-            if (loginError) loginError.textContent = "";
+    (async function initAccessGate() {
+        if (loginContainer) loginContainer.style.display = "flex";
+        if (appWrapper) appWrapper.classList.add("hidden");
+        showAccessState("checking");
 
-            const emailVal = loginEmail.value.trim().toLowerCase();
-            const passwordVal = loginPassword.value;
+        const identity = await fetchAccessIdentity();
 
-            if (emailVal === "givijananashvili40@gmail.com" && passwordVal === "Suffering1@") {
-                // 1. Play startup sound (ev start)
-                playTaycanStartupSound();
+        if (identity) {
+            const emailEl = document.getElementById("access-identity-email");
+            if (emailEl) emailEl.textContent = identity.email;
+            if (loginSubtitle) loginSubtitle.textContent = "Cloudflare Access verified this session.";
+            showAccessState("ready");
+            const readyBtn = document.getElementById("login-btn");
+            if (readyBtn) readyBtn.addEventListener("click", openCockpit);
+            return;
+        }
 
-                // 2. Animate Taycan lights glow
-                if (loginHeroBg) loginHeroBg.classList.add("lit");
-                if (loginAmbientGlow) loginAmbientGlow.classList.add("lit");
+        if (isLocalDev) {
+            const hostEl = document.getElementById("access-dev-host");
+            if (hostEl) hostEl.textContent = window.location.host || "file://";
+            if (loginSubtitle) loginSubtitle.textContent = "Local development build — no identity check available.";
+            showAccessState("dev");
+            const devBtn = document.getElementById("login-btn-dev");
+            if (devBtn) devBtn.addEventListener("click", openCockpit);
+            return;
+        }
 
-                // 3. Disable button, change text
-                if (loginBtn) {
-                    loginBtn.disabled = true;
-                    loginBtn.innerHTML = '<i class="fa-solid fa-bolt animate-pulse"></i> Initializing cockpit...';
-                }
+        // Public host with no Access policy: fail closed. This screen is an operator
+        // warning, not a security boundary — the boundary only exists once Access is
+        // switched on and strangers stop being served this page in the first place.
+        if (loginSubtitle) loginSubtitle.textContent = "This deployment is not protected.";
+        showAccessState("blocked");
+    })();
 
-                // 4. Transition screen and open workspace after sound ramp
-                setTimeout(() => {
-                    if (loginContainer) {
-                        loginContainer.classList.add("fade-out");
-                        setTimeout(() => {
-                            loginContainer.style.display = "none";
-                        }, 800);
-                    }
-                    if (appWrapper) appWrapper.classList.remove("hidden");
-                    localStorage.setItem("reader_auth", "true");
-                }, 1800);
-
-            } else {
-                if (loginError) loginError.textContent = "Invalid username or password.";
-            }
-        });
-    }    function playTaycanStartupSound() {
+    function playTaycanStartupSound() {
         console.log("Playing official Taycan sound from assets (5s limit)...");
         try {
             const audio = new Audio('assets/porsche_taycan_sound.wav');
@@ -242,10 +270,36 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Secret Admin Mode Handler (Triple Click on Porsche crest with Password protection)
+    // Engineering mode (triple click on the Porsche crest).
+    //
+    // This used to sit behind a prompt() password compared in this file. That check
+    // protected nothing: it only toggled the visibility of a button that a visitor could
+    // unhide from DevTools in one line, and it shipped the password to every browser that
+    // loaded the page. Everyone who reaches this screen has already been authenticated by
+    // Cloudflare Access (see docs/ACCESS-SETUP.md), so engineering mode is now what it
+    // always actually was — a discoverability shortcut, not an authorisation boundary.
     let clickCount = 0;
     let clickTimer = null;
-    
+
+    function toggleEngineeringMode() {
+        settingsToggle.classList.toggle("hidden");
+        const enabled = !settingsToggle.classList.contains("hidden");
+
+        if (logoPorsche) {
+            logoPorsche.style.transform = "scale(1.2)";
+            logoPorsche.style.transition = "transform 0.2s ease";
+            setTimeout(() => {
+                logoPorsche.style.transform = "scale(1)";
+            }, 200);
+        }
+
+        if (enabled) {
+            alert("საინჟინრო რეჟიმი გააქტიურდა! ⚙️ ხატულა გამოჩნდა ნავიგაციის პანელში.");
+        } else {
+            alert("საინჟინრო რეჟიმი დეაქტივირებულია და ხატულა დაიმალა.");
+        }
+    }
+
     if (logoPorsche) {
         logoPorsche.addEventListener("click", () => {
             clickCount++;
@@ -256,41 +310,15 @@ document.addEventListener("DOMContentLoaded", () => {
             } else if (clickCount === 3) {
                 clearTimeout(clickTimer);
                 clickCount = 0;
-                
-                // Prompt for admin password
-                const passwordInput = prompt("გთხოვთ შეიყვანოთ საინჟინრო რეჟიმის პაროლი:");
-                
-                if (passwordInput === "Suffering1@") {
-                    settingsToggle.classList.toggle("hidden");
-                    
-                    // Subtle visual feedback on logo click
-                    logoPorsche.style.transform = "scale(1.2)";
-                    logoPorsche.style.transition = "transform 0.2s ease";
-                    setTimeout(() => {
-                        logoPorsche.style.transform = "scale(1)";
-                    }, 200);
-                    
-                    if (!settingsToggle.classList.contains("hidden")) {
-                        alert("საინჟინრო რეჟიმი წარმატებით გააქტიურდა! ⚙️ ხატულა გამოჩნდა ნავიგაციის პანელში.");
-                    } else {
-                        alert("საინჟინრო რეჟიმი დეაქტივირებულია და ხატულა დაიმალა.");
-                    }
-                } else if (passwordInput !== null) {
-                    alert("წვდომა უარყოფილია: არასწორი პაროლი!");
-                }
+                toggleEngineeringMode();
             }
         });
     }
 
-    // Also support ?admin=true URL parameter to show it automatically with password check
+    // Also support ?admin=true so the panel can be linked to directly.
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("admin") === "true") {
-        const passwordInput = prompt("საინჟინრო რეჟიმის გასააქტიურებლად შეიყვანეთ პაროლი:");
-        if (passwordInput === "Suffering1@") {
-            settingsToggle.classList.remove("hidden");
-        } else if (passwordInput !== null) {
-            alert("წვდომა უარყოფილია: არასწორი პაროლი!");
-        }
+        settingsToggle.classList.remove("hidden");
     }
 
     // Toggle Settings Modal
