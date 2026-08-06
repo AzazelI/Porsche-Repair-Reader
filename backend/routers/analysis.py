@@ -7,6 +7,11 @@ import httpx
 import pdfplumber
 import fitz  # PyMuPDF
 from typing import Optional, List
+
+try:
+    import pdf_inspector  # Rust classifier: tells us which pages actually need OCR
+except Exception:  # pragma: no cover - optional dependency
+    pdf_inspector = None
 from pydantic import BaseModel
 from fastapi import APIRouter, UploadFile, File, Header, HTTPException, Query, Depends
 from config import rate_limit, require_admin, get_gemini_api_key, get_all_gemini_api_keys, get_groq_api_keys, logger
@@ -14,6 +19,11 @@ from utils.supabase import upload_to_supabase, get_cached_analysis_from_supabase
 from utils.glossary import build_glossary_text
 
 router = APIRouter(tags=["analysis"])
+
+# When a document reads as text-only overall but pdf-inspector finds individual scanned
+# pages, send just those pages to Vision instead of losing their content. Set to "false"
+# to keep the strictly-cheaper behaviour where such pages are dropped.
+VISION_RESCUE_SCANNED_PAGES = os.getenv("VISION_RESCUE_SCANNED_PAGES", "true").strip().lower() not in ("false", "0", "no")
 
 # JSON Schema for Gemini Structured Output
 GEMINI_SCHEMA = {
@@ -102,6 +112,36 @@ def _has_embedded_images(pdf_path: str) -> bool:
             doc.close()
     except Exception:
         return False
+
+def classify_pdf_pages(pdf_path: str) -> Optional[dict]:
+    """Classifies the PDF and returns which pages genuinely need OCR.
+
+    Uses pdf-inspector (Rust) to avoid sending an entire manual to Gemini Vision when
+    only a handful of pages are scanned. Returns None whenever the classifier is
+    unavailable or fails, so callers fall back to the legacy heuristic.
+
+    Returned 'ocr_page_indices' are 0-indexed, matching PyMuPDF page indexing.
+    """
+    if pdf_inspector is None:
+        return None
+    try:
+        result = pdf_inspector.classify_pdf(pdf_path)
+        # PdfClassification.pages_needing_ocr is documented as 0-indexed.
+        ocr_pages = sorted({int(p) for p in (result.pages_needing_ocr or [])})
+        info = {
+            "pdf_type": result.pdf_type,
+            "page_count": int(result.page_count),
+            "ocr_page_indices": ocr_pages,
+            "confidence": float(result.confidence),
+        }
+        logger.info(
+            f"pdf-inspector: type={info['pdf_type']} pages={info['page_count']} "
+            f"needs_ocr={len(ocr_pages)} confidence={info['confidence']:.2f}"
+        )
+        return info
+    except Exception as e:
+        logger.warning(f"pdf-inspector classification failed, using legacy heuristic: {e}")
+        return None
 
 def smart_should_skip_page(page_text: str, page_index: int, total_pages: int) -> bool:
     """Analyzes page text and determines if it is a cover page, Table of Contents, or legal disclaimer."""
@@ -360,23 +400,35 @@ async def analyze_with_groq(text: str, api_key: str, model_name: str = "llama-3.
         raise HTTPException(status_code=500, detail=str(e))
 
 def render_pdf_to_png_b64(pdf_path: str, dpi: int = 200, max_pages: int = 20,
-                          max_payload_mb: float = 18.0) -> list:
-    """Render PDF pages to lossless grayscale PNGs (base64) for Gemini Vision at 200 DPI."""
+                          max_payload_mb: float = 18.0,
+                          page_indices: Optional[List[int]] = None) -> list:
+    """Render PDF pages to lossless grayscale PNGs (base64) for Gemini Vision at 200 DPI.
+
+    When page_indices (0-indexed) is given, only those pages are rendered — this is how
+    a mixed manual avoids paying Vision cost for its text-based pages. When it is None
+    the first max_pages pages are rendered, as before.
+    """
     doc = fitz.open(pdf_path)
     total = len(doc)
-    n = min(total, max_pages)
-    if total > max_pages:
-        logger.warning(f"PDF has {total} pages; rendering first {max_pages} to cap payload.")
+    if page_indices:
+        targets = [i for i in sorted(set(page_indices)) if 0 <= i < total]
+    else:
+        targets = list(range(total))
+    if not targets:
+        targets = list(range(total))
+    if len(targets) > max_pages:
+        logger.warning(f"Selected {len(targets)} page(s) of {total}; rendering first {max_pages} to cap payload.")
+        targets = targets[:max_pages]
     images = []
     try:
         for attempt_dpi in (dpi, 150, 120):
             images = []
-            for i in range(n):
+            for i in targets:
                 pix = doc[i].get_pixmap(dpi=attempt_dpi, colorspace=fitz.csGRAY)
                 png_bytes = pix.tobytes("png")
                 images.append(base64.b64encode(png_bytes).decode("utf-8"))
             size_mb = sum(len(b) for b in images) / 1048576
-            logger.info(f"Rendered {len(images)} page(s) to grayscale PNG @ {attempt_dpi} DPI (~{size_mb:.2f} MB).")
+            logger.info(f"Rendered {len(images)}/{total} page(s) to grayscale PNG @ {attempt_dpi} DPI (~{size_mb:.2f} MB).")
             if size_mb <= max_payload_mb:
                 break
             logger.warning(f"Payload {size_mb:.2f} MB exceeds {max_payload_mb} MB; retrying at lower DPI.")
@@ -384,13 +436,19 @@ def render_pdf_to_png_b64(pdf_path: str, dpi: int = 200, max_pages: int = 20,
         doc.close()
     return images
 
-async def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: str = "gemini-2.5-flash", extracted_text: Optional[str] = None) -> dict:
-    """Renders an image-only PDF to high-DPI page images and sends them to Gemini for visual OCR and analysis (async)."""
+async def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_name: str = "gemini-2.5-flash", extracted_text: Optional[str] = None,
+                                           page_indices: Optional[List[int]] = None) -> dict:
+    """Renders an image-only PDF to high-DPI page images and sends them to Gemini for visual OCR and analysis (async).
+
+    When page_indices (0-indexed) is supplied, only those pages are rendered as images and
+    the already-extracted machine-readable text is sent alongside them, so the model still
+    sees the whole document without paying image-token cost for its readable pages.
+    """
     if not api_key:
         raise HTTPException(status_code=400, detail="Gemini API Key is missing.")
 
     try:
-        page_images = render_pdf_to_png_b64(pdf_path)
+        page_images = render_pdf_to_png_b64(pdf_path, page_indices=page_indices)
         if not page_images:
             raise ValueError("No pages were rendered from the PDF.")
     except Exception as e:
@@ -400,10 +458,21 @@ async def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_na
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
     glossary_text = await build_glossary_text(extracted_text if extracted_text else "")
 
-    prompt = (
-        "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
+    partial_pages = bool(page_indices)
+    source_note = (
+        "Your task is to analyze the attached manual pages and return a highly structured JSON response in the specified schema.\n"
+        "IMPORTANT — this document is provided to you in TWO parts: (a) the attached page images, which are the scanned/"
+        "non-machine-readable pages, and (b) the MACHINE-READABLE TEXT below, extracted from the remaining pages of the SAME "
+        "document. Treat both as one continuous manual. Do not assume information is missing just because a page is absent "
+        "from the images — check the text section as well.\n"
+    ) if partial_pages else (
         "Your task is to analyze the attached manual pages (provided as high-resolution images), extract all key information, "
         "and return a highly structured JSON response in the specified schema.\n"
+    )
+
+    prompt = (
+        "You are an expert Master Service Technician and technical translator for Porsche and BMW Group.\n"
+        f"{source_note}"
         "Read small print and narrow table cells carefully — fluid capacities (e.g. '2,55 l'), torque values, and FRU/AW figures often sit in tiny table cells and MUST NOT be skipped. Note European decimals use a comma (2,55 = 2.55).\n\n"
         "CRITICAL DOMAIN RULES:\n"
         "1. LABOR TIME: Search the text carefully for any labor time, AW, or FRU quantity. For example, 'Replacing the CVT belt (7 FRU)'. If a number is specified in the text (like '7 FRU' or '7 AW'), you MUST extract that exact number and express it in FRUs (e.g., '7 FRU'). Do NOT guess or inflate the number! If no time is specified at all, only then estimate a realistic value (e.g., '12 FRU') based on complexity.\n"
@@ -431,6 +500,11 @@ async def analyze_pdf_directly_with_gemini(pdf_path: str, api_key: str, model_na
         for img in page_images
     ]
     parts.append({"text": prompt})
+    if partial_pages and extracted_text and extracted_text.strip():
+        parts.append({
+            "text": "MACHINE-READABLE TEXT FROM THE REMAINING PAGES OF THIS SAME DOCUMENT:\n"
+                    f"{extracted_text.strip()}"
+        })
 
     payload = {
         "contents": [{
@@ -558,22 +632,63 @@ async def analyze_instruction(
         structured_data = None
 
         _text_stripped = extracted_text.strip()
+        # Hard override: no usable text at all means the whole document must go to Vision,
+        # whatever any classifier thinks.
         use_vision = len(_text_stripped) < 100
+        vision_page_indices = None
+
         if not use_vision:
             try:
                 with fitz.open(temp_file_path) as _doc:
                     _page_count = max(1, len(_doc))
             except Exception:
                 _page_count = 1
+
+            # The legacy heuristic decides at document level; pdf-inspector refines it
+            # at page level. Deliberate constraint: the classifier may SUPPRESS Vision,
+            # NARROW it, or escalate ONLY a strict subset of pages. It is never allowed
+            # to send a whole document to Vision on its own, because it over-flags
+            # sparse-but-readable pages and that would cost more than it saves.
             _avg_chars = len(_text_stripped) / _page_count
             use_hybrid_vision = _avg_chars < 300 and _has_embedded_images(temp_file_path)
+
+            _pdf_info = classify_pdf_pages(temp_file_path)
+            if _pdf_info is None:
+                if use_hybrid_vision:
+                    logger.info(f"Hybrid vision mode (legacy heuristic): avg {_avg_chars:.0f} chars/page + embedded images.")
+            else:
+                _ocr_pages = _pdf_info["ocr_page_indices"]
+                _partial = bool(_ocr_pages) and len(_ocr_pages) < _page_count
+
+                if use_hybrid_vision:
+                    if (_pdf_info["pdf_type"] == "text_based"
+                            and not _ocr_pages
+                            and _pdf_info["confidence"] >= 0.9):
+                        # Confidently machine-readable — the extracted text is enough.
+                        use_hybrid_vision = False
+                        logger.info("pdf-inspector: confidently text_based — skipping Vision entirely.")
+                    elif _partial:
+                        # Only some pages are unreadable — pay Vision cost for those alone.
+                        vision_page_indices = _ocr_pages
+                        logger.info(f"pdf-inspector: narrowing Vision to {len(_ocr_pages)}/{_page_count} page(s).")
+                elif _partial and VISION_RESCUE_SCANNED_PAGES:
+                    # Legacy would read this document as text-only and silently drop the
+                    # scanned pages — losing torque figures and diagrams. Send just those
+                    # pages to Vision; the extracted text of the rest travels with them.
+                    use_hybrid_vision = True
+                    vision_page_indices = _ocr_pages
+                    logger.info(
+                        f"pdf-inspector: rescuing {len(_ocr_pages)}/{_page_count} scanned page(s) "
+                        "the legacy heuristic would have dropped."
+                    )
         else:
             use_hybrid_vision = False
 
         if use_vision:
             logger.info("Vision mode: extracted text is empty/too short — using Vision API.")
         elif use_hybrid_vision:
-            logger.info(f"Hybrid vision mode: avg {_avg_chars:.0f} chars/page + embedded images detected.")
+            _targeted = len(vision_page_indices) if vision_page_indices else _page_count
+            logger.info(f"Hybrid vision mode: sending {_targeted}/{_page_count} page(s) to Vision.")
 
         # Try Gemini Provider first
         gemini_keys = get_all_gemini_api_keys(x_gemini_api_key)
@@ -591,7 +706,10 @@ async def analyze_instruction(
 
                     try:
                         if use_vision or use_hybrid_vision:
-                            structured_data = await analyze_pdf_directly_with_gemini(temp_file_path, api_key, model_name, extracted_text)
+                            structured_data = await analyze_pdf_directly_with_gemini(
+                                temp_file_path, api_key, model_name, extracted_text,
+                                page_indices=vision_page_indices,
+                            )
                         else:
                             structured_data = await analyze_with_gemini(extracted_text, api_key, model_name)
 
